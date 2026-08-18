@@ -1,0 +1,15 @@
+.DS_Store
+.gradle/
+**/build/
+.idea/
+*.iml
+.env
+.env.*
+!.env.example
+deployment/local/generated/
+docs/product/acceptance/evidence/generated/
+docs/product
+docs/prompts
+agents/
+AGENTS.md
+gemini-created

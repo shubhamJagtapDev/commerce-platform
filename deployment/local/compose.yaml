@@ -1,0 +1,107 @@
+name: commerce-platform-local
+
+services:
+  postgres:
+    image: postgres:18.4
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    ports:
+      - "${POSTGRES_HOST_PORT:-55432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/10-init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - backend
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak_app
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+      IDENTITY_OIDC_CLIENT_SECRET: ${IDENTITY_OIDC_CLIENT_SECRET}
+    ports:
+      - "8082:8080"
+      - "9000:9000"
+    volumes:
+      - ./keycloak/commerce-realm.json:/opt/keycloak/data/import/commerce-realm.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q UP <&3"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      - backend
+
+  identity-access-service:
+    build:
+      context: ../..
+      dockerfile: services/identity-access-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      IDENTITY_DB_URL: jdbc:postgresql://postgres:5432/identity_access?connectTimeout=2&socketTimeout=2&tcpKeepAlive=true
+      IDENTITY_DB_USER: identity_access_app
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      IDENTITY_HTTP_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      - backend
+
+  catalog-service:
+    build:
+      context: ../..
+      dockerfile: services/catalog-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      CATALOG_DB_URL: jdbc:postgresql://postgres:5432/catalog?connectTimeout=2&socketTimeout=2&tcpKeepAlive=true
+      CATALOG_DB_USER: catalog_app
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
+      CATALOG_HTTP_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8081/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      - backend
+
+volumes:
+  postgres-data:
+
+networks:
+  backend:
+    internal: false

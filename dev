@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+workspace_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$workspace_dir"
+
+compose=(docker compose --env-file .env -f deployment/local/compose.yaml)
+
+run_gradle() {
+  if [[ -x ./gradlew ]] && java -version 2>&1 | head -1 | grep -q 'version "25'; then
+    ./gradlew "$@"
+  else
+    docker run --rm \
+      --user "$(id -u):$(id -g)" \
+      -e GRADLE_USER_HOME=/workspace/.gradle \
+      -v "$workspace_dir:/workspace" \
+      -w /workspace \
+      gradle:9.6.1-jdk25 gradle "$@" --no-daemon
+  fi
+}
+
+case "${1:-help}" in
+  start)
+    scripts/init-local-env.sh
+    "${compose[@]}" up --build -d
+    ;;
+  test)
+    run_gradle clean check
+    ;;
+  stop)
+    [[ -f .env ]] || scripts/init-local-env.sh
+    "${compose[@]}" down
+    ;;
+  reset)
+    [[ -f .env ]] || scripts/init-local-env.sh
+    "${compose[@]}" down --volumes
+    ;;
+  status)
+    [[ -f .env ]] || scripts/init-local-env.sh
+    "${compose[@]}" ps
+    ;;
+  verify)
+    run_gradle check
+    scripts/verify-db-isolation.sh
+    curl --fail --silent http://localhost:8080/actuator/health/readiness >/dev/null
+    curl --fail --silent http://localhost:8081/actuator/health/readiness >/dev/null
+    curl --fail --silent http://localhost:8080/v3/api-docs | grep -q 'Commerce Identity Access API'
+    curl --fail --silent http://localhost:8081/v3/api-docs | grep -q 'Commerce Catalog API'
+    curl --fail --silent --location http://localhost:8080/swagger-ui.html | grep -q '<title>Swagger UI</title>'
+    curl --fail --silent --location http://localhost:8081/swagger-ui.html | grep -q '<title>Swagger UI</title>'
+    curl --fail --silent http://localhost:8082/realms/commerce/.well-known/openid-configuration | grep -q '"issuer":"http://localhost:8082/realms/commerce"'
+    curl --fail --silent http://localhost:8080/actuator/gatewayRoutes | grep -q '"routeCount":0'
+    curl --fail --silent http://localhost:8080/api/v1/foundation | grep -q 'identity-access-service'
+    curl --fail --silent http://localhost:8081/api/v1/foundation | grep -q 'catalog-service'
+    [[ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8080/api/v2/foundation)" == "400" ]]
+    [[ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8081/api/v2/foundation)" == "400" ]]
+    scripts/verify-runtime-canary.sh
+    scripts/verify-readiness-fails-closed.sh
+    echo "Local foundation verification: PASS"
+    ;;
+  digest)
+    scripts/generate-foundation-digests.sh
+    ;;
+  *)
+    echo "Usage: ./dev {start|test|verify|status|digest|stop|reset}"
+    ;;
+esac

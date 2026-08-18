@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Commerce Catalog API
+  version: 1.0.0-foundation
+  description: Gate 1 foundation contract. COM-46 adds one explicit protected probe before E1 lifecycle APIs.
+servers:
+  - url: http://localhost:8081
+paths:
+  /actuator/health/liveness:
+    get:
+      operationId: catalogLiveness
+      responses:
+        "200":
+          description: Process is live.
+  /actuator/health/readiness:
+    get:
+      operationId: catalogReadiness
+      responses:
+        "200":
+          description: Service and owned database are ready.
+        "503":
+          description: The owned authoritative database is unavailable.

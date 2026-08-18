@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:commerce:event:account-deletion-accepted:v1",
+  "title": "AccountDeletionAccepted.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "accountId", "securityEpoch", "acceptedAt"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "accountId": { "type": "string", "format": "uuid" },
+    "securityEpoch": { "type": "integer", "minimum": 1 },
+    "acceptedAt": { "type": "string", "format": "date-time" }
+  }
+}

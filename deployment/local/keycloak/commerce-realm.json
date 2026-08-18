@@ -1,0 +1,49 @@
+{
+  "realm": "commerce",
+  "enabled": true,
+  "displayName": "Commerce Local Development",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "CUSTOMER" },
+      { "name": "CATALOG_MAINTAINER" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "identity-access-bff",
+      "name": "Identity Access BFF",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "${IDENTITY_OIDC_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:8080/login/oauth2/code/keycloak"],
+      "webOrigins": ["http://localhost:8080"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/*"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"]
+    },
+    {
+      "clientId": "catalog-api",
+      "name": "Catalog Resource Server",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    }
+  ]
+}

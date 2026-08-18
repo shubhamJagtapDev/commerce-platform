@@ -1,0 +1,6 @@
+.git
+.gradle
+**/build
+.env
+.idea
+docs/product/acceptance/evidence/generated

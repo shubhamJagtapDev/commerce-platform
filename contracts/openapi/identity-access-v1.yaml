@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Commerce Identity Access API
+  version: 1.0.0-foundation
+  description: Gate 1 foundation contract. COM-43 adds reviewed BFF operations before implementation.
+servers:
+  - url: http://localhost:8080
+paths:
+  /actuator/health/liveness:
+    get:
+      operationId: identityLiveness
+      responses:
+        "200":
+          description: Process is live.
+  /actuator/health/readiness:
+    get:
+      operationId: identityReadiness
+      responses:
+        "200":
+          description: Service and owned database are ready.
+        "503":
+          description: An authoritative dependency is unavailable.

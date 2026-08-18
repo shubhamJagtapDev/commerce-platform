@@ -1,0 +1,4 @@
+management:
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_PROBABILITY:0.10}

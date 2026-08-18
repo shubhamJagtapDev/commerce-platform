@@ -1,0 +1,12 @@
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    try-it-out-enabled: false
