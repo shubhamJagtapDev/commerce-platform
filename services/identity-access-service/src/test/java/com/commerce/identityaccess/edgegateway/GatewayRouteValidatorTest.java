@@ -17,7 +17,8 @@ class GatewayRouteValidatorTest {
 
     @Test
     void rejectsDuplicateIds() {
-        assertThatThrownBy(() -> GatewayRouteValidator.validate(List.of(route("catalog", "GET", "/a"), route("catalog", "POST", "/b"))))
+        assertThatThrownBy(() -> GatewayRouteValidator.validate(
+                        List.of(route("catalog", "GET", "/a"), route("catalog", "POST", "/b"))))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Duplicate");
     }
@@ -32,8 +33,7 @@ class GatewayRouteValidatorTest {
     @Test
     void rejectsAmbiguousTemplatedPaths() {
         assertThatThrownBy(() -> GatewayRouteValidator.validate(List.of(
-                route("by-id", "GET", "/api/catalog/{id}"),
-                route("by-slug", "GET", "/api/catalog/{slug}"))))
+                        route("by-id", "GET", "/api/catalog/{id}"), route("by-slug", "GET", "/api/catalog/{slug}"))))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Ambiguous");
     }

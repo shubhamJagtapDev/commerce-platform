@@ -29,6 +29,5 @@ public class FoundationApiController {
     record FoundationStatus(
             @Schema(example = "identity-access-service") String service,
             @Schema(example = "v1") String apiVersion,
-            @Schema(example = "READY") String state) {
-    }
+            @Schema(example = "READY") String state) {}
 }

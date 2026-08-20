@@ -420,6 +420,7 @@ Do not add mock authentication as a shortcut. Catalog maintainer authorization, 
 - [`../architecture/customer-identity-access/lld.md`](../architecture/customer-identity-access/lld.md)
 - [`../architecture/customer-identity-access/schema-design.md`](../architecture/customer-identity-access/schema-design.md)
 - [`database-query-register.md`](database-query-register.md)
+- [`github-jira-workflow.md`](github-jira-workflow.md)
 
 ## What you should learn from this setup
 

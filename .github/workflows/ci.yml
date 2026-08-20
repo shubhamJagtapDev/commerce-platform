@@ -27,7 +27,7 @@ jobs:
         with:
           validate-wrappers: true
 
-      - name: Unit, architecture, contract, and secret checks
+      - name: Mandatory quality gate (format, analysis, null safety, architecture, tests, contracts, secrets)
         run: ./gradlew clean check --no-daemon
 
       - name: Migration and integration environment

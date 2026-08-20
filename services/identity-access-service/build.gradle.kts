@@ -1,7 +1,13 @@
+import net.ltgt.gradle.errorprone.CheckSeverity
+import net.ltgt.gradle.errorprone.errorprone
+import org.gradle.api.tasks.compile.JavaCompile
+
 plugins {
     java
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.error.prone)
+    alias(libs.plugins.spotless)
 }
 
 java {
@@ -17,6 +23,10 @@ dependencyManagement {
 }
 
 dependencies {
+    compileOnly(libs.jspecify)
+    errorprone(libs.error.prone.core)
+    errorprone(libs.nullaway)
+
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
@@ -39,11 +49,33 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation(libs.archunit.junit5)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+spotless {
+    java {
+        palantirJavaFormat(libs.versions.palantir.java.format.get())
+        target("src/*/java/**/*.java")
+    }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+    options.errorprone {
+        disableWarningsInGeneratedCode.set(true)
+        check("NullAway", CheckSeverity.ERROR)
+        error("StringSplitter")
+        option("NullAway:AnnotatedPackages", "com.commerce")
+    }
+}
+
+tasks.named("check") {
+    dependsOn("spotlessCheck")
 }
 
 dependencyLocking {

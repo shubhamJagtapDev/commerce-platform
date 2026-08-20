@@ -4,6 +4,10 @@ This is a Java 25 monorepo with independently deployable Identity Access and Cat
 
 Start with the [Master Local Setup and Decision Guide](docs/development/master-local-setup-guide.md) for architecture ownership, prerequisites, commands, ports, API versioning, Swagger policy, validation, troubleshooting, and the decisions behind the baseline.
 
+Use the [GitHub + Jira Development Workflow](docs/development/github-jira-workflow.md) when creating branches, commits, and pull requests for Jira work items.
+
+Follow the [Java and Spring Boot Coding Standards](docs/development/java-spring-boot-coding-standards.md) for design, implementation, testing, and code review.
+
 ## Local path
 
 Prerequisites: Docker Desktop/Engine with Compose and OpenSSL. A host JDK is optional because the repository pins a Gradle Java 25 container fallback.

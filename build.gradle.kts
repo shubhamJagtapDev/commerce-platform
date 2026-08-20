@@ -2,6 +2,8 @@ plugins {
     base
     alias(libs.plugins.spring.boot) apply false
     alias(libs.plugins.spring.dependency.management) apply false
+    alias(libs.plugins.error.prone) apply false
+    alias(libs.plugins.spotless)
 }
 
 allprojects {
@@ -10,6 +12,19 @@ allprojects {
 
     repositories {
         mavenCentral()
+    }
+}
+
+spotless {
+    format("misc") {
+        target(
+            ".github/**/*.yml",
+            "*.gradle.kts",
+            "gradle/*.toml",
+            "scripts/**/*.sh",
+            "dev")
+        trimTrailingWhitespace()
+        endWithNewline()
     }
 }
 
@@ -33,4 +48,7 @@ tasks.register<Exec>("secretCheck") {
 
 tasks.named("check") {
     dependsOn("architectureCheck", "contractCheck", "secretCheck")
+    dependsOn(
+        ":services:catalog-service:check",
+        ":services:identity-access-service:check")
 }

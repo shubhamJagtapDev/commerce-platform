@@ -10,13 +10,17 @@ public class SecurityConfiguration {
 
     @Bean
     SecurityFilterChain applicationSecurity(HttpSecurity http) throws Exception {
-        return http
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
-                        .requestMatchers("/actuator/gatewayRoutes").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/api/*/foundation").permitAll()
-                        .anyRequest().denyAll())
+        return http.authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/actuator/health/**", "/actuator/info")
+                        .permitAll()
+                        .requestMatchers("/actuator/gatewayRoutes")
+                        .permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                        .permitAll()
+                        .requestMatchers("/api/*/foundation")
+                        .permitAll()
+                        .anyRequest()
+                        .denyAll())
                 .build();
     }
 }

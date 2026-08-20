@@ -7,8 +7,7 @@ import java.util.Set;
 
 public final class GatewayRouteValidator {
 
-    private GatewayRouteValidator() {
-    }
+    private GatewayRouteValidator() {}
 
     public static void validate(List<GatewayRouteSpec> routes) {
         Set<String> ids = new HashSet<>();
@@ -27,8 +26,7 @@ public final class GatewayRouteValidator {
                 var first = routes.get(left);
                 var second = routes.get(right);
                 if (first.method().equalsIgnoreCase(second.method()) && pathsOverlap(first.path(), second.path())) {
-                    throw new IllegalStateException(
-                            "Ambiguous gateway routes: " + first.id() + " and " + second.id());
+                    throw new IllegalStateException("Ambiguous gateway routes: " + first.id() + " and " + second.id());
                 }
             }
         }
@@ -45,7 +43,8 @@ public final class GatewayRouteValidator {
                 || route.deadline().isNegative()
                 || route.deadline().isZero()
                 || route.maxRequestBytes() < 1) {
-            throw new IllegalStateException("Every gateway route requires id, method, path, target, access, deadline, and size limit");
+            throw new IllegalStateException(
+                    "Every gateway route requires id, method, path, target, access, deadline, and size limit");
         }
         if (!route.path().startsWith("/") || route.target().getScheme() == null) {
             throw new IllegalStateException("Gateway route path and target URI are invalid: " + route.id());
@@ -65,8 +64,8 @@ public final class GatewayRouteValidator {
     }
 
     private static boolean pathsOverlap(String first, String second) {
-        String[] left = first.split("/");
-        String[] right = second.split("/");
+        String[] left = first.split("/", -1);
+        String[] right = second.split("/", -1);
         if (left.length != right.length) {
             return false;
         }
