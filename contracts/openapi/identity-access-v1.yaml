@@ -1,11 +1,51 @@
 openapi: 3.1.0
 info:
   title: Commerce Identity Access API
-  version: 1.0.0-foundation
-  description: Gate 1 foundation contract. COM-43 adds reviewed BFF operations before implementation.
+  version: 1.0.0
+  description: Versioned Identity Access boundary. Gate 2 provides authentication-only BFF sessions; account binding is deferred.
 servers:
   - url: http://localhost:8080
 paths:
+  /bff/login:
+    get:
+      operationId: beginBffLogin
+      summary: Start the fixed Keycloak Authorization Code with PKCE login flow.
+      responses:
+        "302":
+          description: Browser redirect to the authorization endpoint.
+        "401":
+          $ref: "#/components/responses/AuthenticationFailed"
+        "503":
+          $ref: "#/components/responses/KeycloakUnavailable"
+  /login/oauth2/code/keycloak:
+    get:
+      operationId: keycloakAuthorizationCallback
+      summary: Consume a one-time authorization callback.
+      responses:
+        "302":
+          description: Successful callbacks redirect to /bff/csrf.
+        "401":
+          $ref: "#/components/responses/AuthenticationFailed"
+        "503":
+          $ref: "#/components/responses/KeycloakUnavailable"
+  /bff/csrf:
+    get:
+      operationId: bffCsrfToken
+      summary: Obtain the synchronizer CSRF token for an active BFF session.
+      responses:
+        "200":
+          description: Active-session CSRF token.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              example: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CsrfToken"
+        "401":
+          $ref: "#/components/responses/MissingSession"
   /actuator/health/liveness:
     get:
       operationId: identityLiveness
@@ -20,3 +60,43 @@ paths:
           description: Service and owned database are ready.
         "503":
           description: An authoritative dependency is unavailable.
+components:
+  schemas:
+    CsrfToken:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 1
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+  responses:
+    AuthenticationFailed:
+      description: Generic authentication failure without provider details.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    MissingSession:
+      description: Active BFF session is absent or expired.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    KeycloakUnavailable:
+      description: Keycloak dependency is unavailable; no provider details are disclosed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"

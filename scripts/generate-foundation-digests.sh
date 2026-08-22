@@ -20,6 +20,11 @@ echo "platform.spring-cloud=2025.1.2"
 echo "platform.keycloak=26.7.0"
 echo "platform.postgresql=18.4"
 
+shasum -a 256 deployment/local/keycloak/commerce-realm.json \
+  deployment/local/keycloak/password-blacklist/10k-most-common.txt \
+  contracts/openapi/identity-access-v1.yaml \
+  | sed 's#  #  gate2.#'
+
 if curl --fail --silent --max-time 3 http://localhost:8080/actuator/gatewayRoutes >/dev/null 2>&1; then
   route_manifest="$(curl --fail --silent --max-time 3 http://localhost:8080/actuator/gatewayRoutes)"
   printf '%s' "$route_manifest" | shasum -a 256 | sed 's/  -$/  runtime.gateway-route-manifest.json/'

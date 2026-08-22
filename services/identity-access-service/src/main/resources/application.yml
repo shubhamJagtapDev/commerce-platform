@@ -28,8 +28,39 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${IDENTITY_OIDC_CLIENT_ID:identity-access-bff}
+            client-secret: ${IDENTITY_OIDC_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid,profile,email,roles
+        provider:
+          keycloak:
+            authorization-uri: ${IDENTITY_OIDC_AUTHORIZATION_URI:http://localhost:8082/realms/commerce/protocol/openid-connect/auth}
+            token-uri: ${IDENTITY_OIDC_TOKEN_URI:http://keycloak:8080/realms/commerce/protocol/openid-connect/token}
+            jwk-set-uri: ${IDENTITY_OIDC_JWK_SET_URI:http://keycloak:8080/realms/commerce/protocol/openid-connect/certs}
 
 commerce:
+  auth:
+    public-issuer: ${IDENTITY_OIDC_PUBLIC_ISSUER:http://localhost:8082/realms/commerce}
+    client-id: ${IDENTITY_OIDC_CLIENT_ID:identity-access-bff}
+    public-origin: ${IDENTITY_BFF_PUBLIC_ORIGIN:http://localhost:8080}
+    private-discovery-uri: ${IDENTITY_OIDC_PRIVATE_DISCOVERY_URI:http://keycloak:8080/realms/commerce/.well-known/openid-configuration}
+    private-jwks-uri: ${IDENTITY_OIDC_JWK_SET_URI:http://keycloak:8080/realms/commerce/protocol/openid-connect/certs}
+    session-cookie-name: ${IDENTITY_SESSION_COOKIE_NAME:commerce-session}
+    secure-cookie: ${IDENTITY_SESSION_SECURE_COOKIE:false}
+    transaction-ttl: PT10M
+    session-idle-ttl: PT30M
+    session-absolute-ttl: PT8H
+    crypto:
+      encryption-key-id: ${IDENTITY_AUTH_ENCRYPTION_KEY_ID}
+      encryption-key: ${IDENTITY_AUTH_ENCRYPTION_KEY}
+      hmac-key-id: ${IDENTITY_AUTH_HMAC_KEY_ID}
+      hmac-key: ${IDENTITY_AUTH_HMAC_KEY}
   gateway:
     routes: []
 
@@ -54,7 +85,7 @@ management:
         enabled: true
       group:
         readiness:
-          include: readinessState,db
+          include: readinessState,db,crypto,keycloak
 server:
   port: ${IDENTITY_HTTP_PORT:8080}
   shutdown: graceful

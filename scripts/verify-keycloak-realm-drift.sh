@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+workspace_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$workspace_dir"
+
+source .env
+
+admin_token="$({
+  curl --fail --silent --show-error --max-time 3 \
+    --data-urlencode 'client_id=admin-cli' \
+    --data-urlencode 'grant_type=password' \
+    --data-urlencode "username=$KEYCLOAK_ADMIN_USER" \
+    --data-urlencode "password=$KEYCLOAK_ADMIN_PASSWORD" \
+    http://localhost:8082/realms/master/protocol/openid-connect/token
+} | jq -r '.access_token')"
+
+[[ -n "$admin_token" && "$admin_token" != "null" ]]
+
+realm="$(curl --fail --silent --show-error --max-time 3 \
+  -H "Authorization: Bearer $admin_token" \
+  http://localhost:8082/admin/realms/commerce)"
+client="$(curl --fail --silent --show-error --max-time 3 \
+  -H "Authorization: Bearer $admin_token" \
+  'http://localhost:8082/admin/realms/commerce/clients?clientId=identity-access-bff' \
+  | jq -e 'if length == 1 then .[0] else error("identity-access-bff client is missing or duplicated") end')"
+
+jq -e '
+  .registrationAllowed == false
+  and .rememberMe == false
+  and .bruteForceProtected == true
+  and .permanentLockout == false
+  and .failureFactor == 5
+  and .waitIncrementSeconds == 30
+  and .maxFailureWaitSeconds == 900
+  and .maxDeltaTimeSeconds == 43200
+  and (.passwordPolicy | contains("hashAlgorithm(argon2)"))
+  and (.passwordPolicy | contains("length(15)"))
+  and (.passwordPolicy | contains("passwordBlacklist(10000)"))
+' <<<"$realm" >/dev/null
+
+jq -e '
+  .publicClient == false
+  and .standardFlowEnabled == true
+  and .implicitFlowEnabled == false
+  and .directAccessGrantsEnabled == false
+  and .serviceAccountsEnabled == false
+  and .redirectUris == ["http://localhost:8080/login/oauth2/code/keycloak"]
+  and .webOrigins == ["http://localhost:8080"]
+  and .attributes["pkce.code.challenge.method"] == "S256"
+  and .attributes["post.logout.redirect.uris"] == "http://localhost:8080/"
+  and .attributes["oauth2.device.authorization.grant.enabled"] == "false"
+' <<<"$client" >/dev/null
+
+echo "Keycloak Gate 2 realm drift check: PASS"
