@@ -47,7 +47,7 @@ Tests use JUnit Jupiter and focused Spring test modules; PostgreSQL behavior use
 
 ## Commit & Pull Request Guidelines
 
-History uses Conventional Commit subjects such as `feat(platform): ...`. Jira work uses `<type>(<scope>): COM-123 <imperative summary>`, branches like `feat/COM-123-short-description`, and PR titles like `COM-123: Add checkout validation`. PRs link Jira, summarize behavior, list validation, and note security, migration, or rollback concerns. Run `./dev test` and `./dev verify` before merge.
+History uses Conventional Commit subjects such as `feat(platform): ...`. Jira work uses `<type>(<scope>): COM-123 <imperative summary>`, branches like `feat/COM-123-short-description`, and PR titles like `COM-123: Add checkout validation`. PRs link Jira, summarize behavior, list validation, and note security, migration, or rollback concerns. Run `./dev test` and `./dev verify` before merge. refer [github-jira-workflow.md](docs/development/github-jira-workflow.md) more context, if only you need it.
 
 ## Security & Agent Instructions
 
