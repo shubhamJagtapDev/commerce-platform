@@ -13,6 +13,6 @@ public class ApiVersioningConfiguration implements WebMvcConfigurer {
                 .usePathSegment(1, path -> path.pathWithinApplication().value().startsWith("/api/v"))
                 .addSupportedVersions("1.0")
                 .detectSupportedVersions(false)
-                .setVersionRequired(true);
+                .setVersionRequired(false);
     }
 }
