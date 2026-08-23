@@ -1,7 +1,7 @@
 FROM gradle:9.6.1-jdk25 AS build
 WORKDIR /workspace
 COPY . .
-RUN --mount=type=cache,target=/home/gradle/.gradle \
+RUN --mount=type=cache,target=/home/gradle/.gradle,id=gradle-cache-identity-access-service,sharing=locked \
     gradle :services:identity-access-service:bootJar --no-daemon
 
 FROM eclipse-temurin:25-jre
