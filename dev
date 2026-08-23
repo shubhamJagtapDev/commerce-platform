@@ -50,6 +50,7 @@ case "${1:-help}" in
     curl --fail --silent --location http://localhost:8081/swagger-ui.html | grep -q '<title>Swagger UI</title>'
     curl --fail --silent http://localhost:8082/realms/commerce/.well-known/openid-configuration | grep -q '"issuer":"http://localhost:8082/realms/commerce"'
     scripts/verify-keycloak-realm-drift.sh
+    scripts/verify-bff-oidc-flow.sh
     curl --fail --silent http://localhost:8080/actuator/gatewayRoutes | grep -q '"routeCount":0'
     curl --fail --silent http://localhost:8080/api/v1/foundation | grep -q 'identity-access-service'
     curl --fail --silent http://localhost:8081/api/v1/foundation | grep -q 'catalog-service'

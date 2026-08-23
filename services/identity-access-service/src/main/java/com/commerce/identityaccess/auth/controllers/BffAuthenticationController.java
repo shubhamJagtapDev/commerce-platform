@@ -1,7 +1,6 @@
 package com.commerce.identityaccess.auth.controllers;
 
 import com.commerce.identityaccess.auth.configs.AuthProperties;
-import com.commerce.identityaccess.auth.exceptions.AuthenticationFailureException;
 import com.commerce.identityaccess.auth.exceptions.MissingSessionException;
 import com.commerce.identityaccess.auth.filters.BffSessionAuthenticationFilter;
 import com.commerce.identityaccess.auth.models.PrincipalContext;
@@ -11,9 +10,6 @@ import com.commerce.identityaccess.auth.services.VersionedCryptoService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.http.CacheControl;
@@ -47,29 +43,23 @@ public final class BffAuthenticationController {
                 .authorizationUri(properties.publicIssuer() + "/protocol/openid-connect/auth")
                 .clientId(properties.clientId())
                 .redirectUri(properties.publicOrigin() + "/login/oauth2/code/keycloak")
-                .scopes(Set.of("openid", "profile", "email", "roles"))
+                .scopes(Set.of("openid", "roles"))
                 .state(state)
                 .attributes(attributes -> {
                     attributes.put("registration_id", "keycloak");
                     attributes.put("nonce", nonce);
                     attributes.put("code_verifier", verifier);
                 })
-                .additionalParameters(
-                        Map.of("nonce", nonce, "code_challenge", sha256Url(verifier), "code_challenge_method", "S256"))
+                .additionalParameters(Map.of(
+                        "nonce",
+                        cryptoService.sha256Url(nonce),
+                        "code_challenge",
+                        cryptoService.sha256Url(verifier),
+                        "code_challenge_method",
+                        "S256"))
                 .build();
         authorizationRequestRepository.create(state, nonce, verifier);
         response.sendRedirect(authorizationRequest.getAuthorizationRequestUri());
-    }
-
-    private String sha256Url(String value) {
-        try {
-            return java.util.Base64.getUrlEncoder()
-                    .withoutPadding()
-                    .encodeToString(
-                            MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.US_ASCII)));
-        } catch (NoSuchAlgorithmException exception) {
-            throw new AuthenticationFailureException();
-        }
     }
 
     @GetMapping("/bff/csrf")

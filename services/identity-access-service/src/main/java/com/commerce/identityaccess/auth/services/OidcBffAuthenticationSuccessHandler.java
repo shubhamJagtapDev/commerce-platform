@@ -27,19 +27,25 @@ public final class OidcBffAuthenticationSuccessHandler implements Authentication
     private final RequestAuthorizedClientRepository authorizedClientRepository;
     private final BffSessionService sessionService;
     private final BffSessionCookieService cookieService;
+    private final SafeOidcAuthenticationFailureHandler failureHandler;
     private final AuthProperties properties;
+    private final VersionedCryptoService cryptoService;
     private final Clock clock;
 
     public OidcBffAuthenticationSuccessHandler(
             RequestAuthorizedClientRepository authorizedClientRepository,
             BffSessionService sessionService,
             BffSessionCookieService cookieService,
+            SafeOidcAuthenticationFailureHandler failureHandler,
             AuthProperties properties,
+            VersionedCryptoService cryptoService,
             Clock clock) {
         this.authorizedClientRepository = authorizedClientRepository;
         this.sessionService = sessionService;
         this.cookieService = cookieService;
+        this.failureHandler = failureHandler;
         this.properties = properties;
+        this.cryptoService = cryptoService;
         this.clock = clock;
     }
 
@@ -47,13 +53,23 @@ public final class OidcBffAuthenticationSuccessHandler implements Authentication
     public void onAuthenticationSuccess(
             HttpServletRequest request, HttpServletResponse response, Authentication authentication)
             throws IOException, ServletException {
+        try {
+            completeAuthentication(request, response, authentication);
+        } catch (AuthenticationFailureException exception) {
+            failureHandler.reject(response, exception);
+        }
+    }
+
+    private void completeAuthentication(
+            HttpServletRequest request, HttpServletResponse response, Authentication authentication)
+            throws IOException {
         if (!(authentication instanceof OAuth2AuthenticationToken oauthAuthentication)
                 || !(oauthAuthentication.getPrincipal() instanceof OidcUser oidcUser)) {
-            throw new AuthenticationFailureException();
+            throw new AuthenticationFailureException("unexpected_oidc_authentication");
         }
         OAuth2AuthorizedClient client = authorizedClientRepository.current(request);
         if (client == null) {
-            throw new AuthenticationFailureException();
+            throw new AuthenticationFailureException("missing_callback_authorized_client");
         }
         BffSessionService.ValidatedOidcPrincipal principal = validate(oidcUser, request);
         String refreshToken = client.getRefreshToken() == null
@@ -74,7 +90,7 @@ public final class OidcBffAuthenticationSuccessHandler implements Authentication
         String subject = user.getSubject();
         @Nullable Object realmAccess = user.getClaim("realm_access");
         if (audience == null || subject == null) {
-            throw new AuthenticationFailureException();
+            throw new AuthenticationFailureException("missing_id_token_identity_claim");
         }
         if (!properties.publicIssuer().equals(String.valueOf(user.getIdToken().getIssuer()))
                 || !audience.contains(properties.clientId())
@@ -98,7 +114,7 @@ public final class OidcBffAuthenticationSuccessHandler implements Authentication
     private boolean equalsNonce(HttpServletRequest request, OidcUser user) {
         Object expected = request.getAttribute(DatabaseAuthorizationRequestRepository.NONCE_ATTRIBUTE);
         return expected instanceof String nonce
-                && nonce.equals(user.getIdToken().getClaimAsString("nonce"));
+                && cryptoService.sha256Url(nonce).equals(user.getIdToken().getClaimAsString("nonce"));
     }
 
     private Instant notBefore(OidcUser user) {
@@ -121,7 +137,7 @@ public final class OidcBffAuthenticationSuccessHandler implements Authentication
             }
         }
         if (customer == maintainer) {
-            throw new AuthenticationFailureException();
+            throw new AuthenticationFailureException("unsupported_actor_role");
         }
         return customer ? PrincipalKind.CUSTOMER : PrincipalKind.CATALOG_MAINTAINER;
     }

@@ -1,6 +1,7 @@
 package com.commerce.identityaccess.auth;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.commerce.identityaccess.auth.configs.AuthProperties;
@@ -12,6 +13,13 @@ import java.util.Base64;
 import org.junit.jupiter.api.Test;
 
 class VersionedCryptoServiceTest {
+    @Test
+    void hashesOidcNonceAndPkceValuesUsingUnpaddedBase64Url() {
+        VersionedCryptoService crypto = new VersionedCryptoService(properties());
+
+        assertEquals("eDd7UldXtJRCf4kBT5fXmSjzk40U61HiD7XeyYNOswQ", crypto.sha256Url("nonce"));
+    }
+
     @Test
     void decryptRejectsCiphertextTamperedForAnotherPurpose() {
         VersionedCryptoService crypto = new VersionedCryptoService(properties());

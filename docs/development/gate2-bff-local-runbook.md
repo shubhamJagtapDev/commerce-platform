@@ -24,6 +24,11 @@ SecLists 2026.1 10k blacklist. `./dev verify` runs the non-mutating realm-drift 
 Keycloak volumes are only reconciled deliberately with `scripts/reconcile-keycloak-realm.sh`, then
 verified again; the reconcile script must not be used as a substitute for reviewing realm changes.
 
+`identity-access-bff` has a client-scoped realm-role mapper that emits `realm_access.roles` only in
+the ID token. Identity Access uses that signed claim to select exactly one Gate 2 actor kind before
+it creates a BFF session. The built-in Keycloak `roles` scope remains responsible for access-token
+roles, so this mapper must not be removed or widened to other clients.
+
 ## Browser acceptance checklist
 
 1. Navigate to `http://localhost:8080/bff/login` and authenticate as the customer, then the maintainer.

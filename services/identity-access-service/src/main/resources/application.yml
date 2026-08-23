@@ -37,11 +37,15 @@ spring:
             client-secret: ${IDENTITY_OIDC_CLIENT_SECRET}
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope: openid,profile,email,roles
+            scope:
+              - openid
+              - roles
         provider:
           keycloak:
             authorization-uri: ${IDENTITY_OIDC_AUTHORIZATION_URI:http://localhost:8082/realms/commerce/protocol/openid-connect/auth}
             token-uri: ${IDENTITY_OIDC_TOKEN_URI:http://keycloak:8080/realms/commerce/protocol/openid-connect/token}
+            user-info-uri: ${IDENTITY_OIDC_USER_INFO_URI:http://keycloak:8080/realms/commerce/protocol/openid-connect/userinfo}
+            user-name-attribute: sub
             jwk-set-uri: ${IDENTITY_OIDC_JWK_SET_URI:http://keycloak:8080/realms/commerce/protocol/openid-connect/certs}
 
 commerce:

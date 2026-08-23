@@ -5,6 +5,7 @@ import com.commerce.identityaccess.auth.exceptions.AuthCryptoException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
@@ -41,6 +42,15 @@ public final class VersionedCryptoService {
 
     public String randomUrlValue() {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomOpaqueValue());
+    }
+
+    public String sha256Url(String value) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.US_ASCII));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+        } catch (GeneralSecurityException exception) {
+            throw new AuthCryptoException("Unable to calculate an authentication digest", exception);
+        }
     }
 
     public byte[] hmac(String purpose, byte[] value) {

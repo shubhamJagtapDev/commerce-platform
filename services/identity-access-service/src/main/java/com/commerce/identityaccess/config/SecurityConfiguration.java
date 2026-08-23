@@ -9,6 +9,7 @@ import com.commerce.identityaccess.auth.repositories.RequestAuthorizedClientRepo
 import com.commerce.identityaccess.auth.services.BffSessionCookieService;
 import com.commerce.identityaccess.auth.services.BffSessionService;
 import com.commerce.identityaccess.auth.services.OidcBffAuthenticationSuccessHandler;
+import com.commerce.identityaccess.auth.services.SafeOidcAuthenticationFailureHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,13 +22,13 @@ import org.springframework.security.web.savedrequest.NullRequestCache;
 
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfiguration {
-
     @Bean
     SecurityFilterChain applicationSecurity(
             HttpSecurity http,
             DatabaseAuthorizationRequestRepository authorizationRequestRepository,
             RequestAuthorizedClientRepository authorizedClientRepository,
             OidcBffAuthenticationSuccessHandler successHandler,
+            SafeOidcAuthenticationFailureHandler failureHandler,
             BffSessionService sessionService,
             BffSessionCookieService cookieService,
             AuthProperties authProperties)
@@ -60,13 +61,7 @@ public class SecurityConfiguration {
                                 endpoint -> endpoint.authorizationRequestRepository(authorizationRequestRepository))
                         .authorizedClientRepository(authorizedClientRepository)
                         .successHandler(successHandler)
-                        .failureHandler((request, response, exception) -> {
-                            response.setStatus(401);
-                            response.setContentType("application/problem+json");
-                            response.getWriter()
-                                    .write(
-                                            "{\"type\":\"urn:commerce:problem:authentication-failed\",\"title\":\"Authentication failed\",\"status\":401}");
-                        }))
+                        .failureHandler(failureHandler))
                 .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint((request, response, exception) -> {
                     response.setStatus(401);
                     response.setContentType("application/problem+json");

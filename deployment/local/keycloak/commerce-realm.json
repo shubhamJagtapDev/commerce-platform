@@ -14,7 +14,7 @@
   "maxDeltaTimeSeconds": 43200,
   "quickLoginCheckMilliSeconds": 1000,
   "minimumQuickLoginWaitSeconds": 30,
-  "passwordPolicy": "hashAlgorithm(argon2) and length(15) and maxLength(128) and passwordBlacklist(10000)",
+  "passwordPolicy": "hashAlgorithm(argon2) and length(15) and maxLength(128) and passwordBlacklist(10k-most-common.txt)",
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "roles": {
@@ -44,6 +44,21 @@
       },
       "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
       "protocolMappers": [
+        {
+          "name": "bff-id-token-realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "false",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "false"
+          }
+        },
         {
           "name": "catalog-api-audience",
           "protocol": "openid-connect",

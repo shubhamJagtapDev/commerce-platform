@@ -39,7 +39,7 @@ services:
       - "127.0.0.1:8082:8080"
     volumes:
       - ./keycloak/commerce-realm.json:/opt/keycloak/data/import/commerce-realm.json:ro
-      - ./keycloak/password-blacklist:/opt/keycloak/password-blacklist:ro
+      - ./keycloak/password-blacklist/10k-most-common.txt:/opt/keycloak/data/password-blacklists/10k-most-common.txt:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -2,9 +2,11 @@ package com.commerce.identityaccess.auth.repositories;
 
 import com.commerce.identityaccess.auth.configs.AuthProperties;
 import com.commerce.identityaccess.auth.exceptions.AuthenticationFailureException;
+import com.commerce.identityaccess.auth.services.VersionedCryptoService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
@@ -17,10 +19,13 @@ public final class DatabaseAuthorizationRequestRepository
     public static final String NONCE_ATTRIBUTE = DatabaseAuthorizationRequestRepository.class.getName() + ".nonce";
     private final AuthTransactionStore transactionStore;
     private final AuthProperties properties;
+    private final VersionedCryptoService cryptoService;
 
-    public DatabaseAuthorizationRequestRepository(AuthTransactionStore transactionStore, AuthProperties properties) {
+    public DatabaseAuthorizationRequestRepository(
+            AuthTransactionStore transactionStore, AuthProperties properties, VersionedCryptoService cryptoService) {
         this.transactionStore = transactionStore;
         this.properties = properties;
+        this.cryptoService = cryptoService;
     }
 
     @Override
@@ -68,13 +73,14 @@ public final class DatabaseAuthorizationRequestRepository
                 .authorizationUri(properties.publicIssuer() + "/protocol/openid-connect/auth")
                 .clientId(properties.clientId())
                 .redirectUri(properties.publicOrigin() + "/login/oauth2/code/keycloak")
+                .scopes(Set.of("openid", "roles"))
                 .state(state)
                 .attributes(attributes -> {
                     attributes.put("code_verifier", material.verifier());
                     attributes.put("nonce", material.nonce());
                     attributes.put("registration_id", "keycloak");
                 })
-                .additionalParameters(Map.of("nonce", material.nonce()))
+                .additionalParameters(Map.of("nonce", cryptoService.sha256Url(material.nonce())))
                 .build();
     }
 }

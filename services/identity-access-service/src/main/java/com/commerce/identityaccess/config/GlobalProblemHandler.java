@@ -3,6 +3,8 @@ package com.commerce.identityaccess.config;
 import com.commerce.identityaccess.auth.exceptions.AuthenticationFailureException;
 import com.commerce.identityaccess.auth.exceptions.MissingSessionException;
 import java.net.URI;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,9 +12,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalProblemHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalProblemHandler.class);
 
     @ExceptionHandler(AuthenticationFailureException.class)
     ProblemDetail authenticationFailed(AuthenticationFailureException exception) {
+        LOGGER.info("BFF authentication rejected with code={}", exception.code());
         return problem(HttpStatus.UNAUTHORIZED, "urn:commerce:problem:authentication-failed", "Authentication failed");
     }
 
