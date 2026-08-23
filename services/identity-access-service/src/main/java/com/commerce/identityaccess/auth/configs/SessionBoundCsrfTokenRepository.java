@@ -1,7 +1,7 @@
 package com.commerce.identityaccess.auth.configs;
 
 import com.commerce.identityaccess.auth.filters.BffSessionAuthenticationFilter;
-import com.commerce.identityaccess.auth.services.BffSessionService;
+import com.commerce.identityaccess.auth.models.ResolvedBffSession;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.Nullable;
@@ -24,7 +24,7 @@ public final class SessionBoundCsrfTokenRepository implements CsrfTokenRepositor
     @Override
     public @Nullable CsrfToken loadToken(HttpServletRequest request) {
         Object resolved = request.getAttribute(BffSessionAuthenticationFilter.RESOLVED_SESSION_ATTRIBUTE);
-        if (!(resolved instanceof BffSessionService.ResolvedSession session)) {
+        if (!(resolved instanceof ResolvedBffSession session)) {
             return null;
         }
         return new DefaultCsrfToken("X-CSRF-Token", "_csrf", session.csrfToken());

@@ -1,23 +1,21 @@
 package com.commerce.identityaccess.auth.services;
 
 import com.commerce.identityaccess.auth.configs.AuthProperties;
-import com.commerce.identityaccess.auth.exceptions.AuthenticationFailureException;
 import com.commerce.identityaccess.auth.exceptions.MissingSessionException;
 import com.commerce.identityaccess.auth.models.BffSessionAuthorityEntity;
 import com.commerce.identityaccess.auth.models.BffSessionEntity;
+import com.commerce.identityaccess.auth.models.OidcTokenBundle;
 import com.commerce.identityaccess.auth.models.PrincipalContext;
 import com.commerce.identityaccess.auth.models.PrincipalKind;
+import com.commerce.identityaccess.auth.models.ResolvedBffSession;
+import com.commerce.identityaccess.auth.models.ValidatedOidcPrincipal;
 import com.commerce.identityaccess.auth.repositories.BffSessionAuthorityRepository;
 import com.commerce.identityaccess.auth.repositories.BffSessionRepository;
 import jakarta.transaction.Transactional;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Set;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,6 +23,7 @@ public class BffSessionService {
     private final BffSessionRepository sessionRepository;
     private final BffSessionAuthorityRepository authorityRepository;
     private final VersionedCryptoService cryptoService;
+    private final TokenBundleCodec tokenBundleCodec;
     private final AuthProperties properties;
     private final Clock clock;
 
@@ -32,11 +31,13 @@ public class BffSessionService {
             BffSessionRepository sessionRepository,
             BffSessionAuthorityRepository authorityRepository,
             VersionedCryptoService cryptoService,
+            TokenBundleCodec tokenBundleCodec,
             AuthProperties properties,
             Clock clock) {
         this.sessionRepository = sessionRepository;
         this.authorityRepository = authorityRepository;
         this.cryptoService = cryptoService;
+        this.tokenBundleCodec = tokenBundleCodec;
         this.properties = properties;
         this.clock = clock;
     }
@@ -46,7 +47,7 @@ public class BffSessionService {
         Instant now = clock.instant();
         String rawHandle = cryptoService.randomUrlValue();
         String csrfToken = cryptoService.csrfToken(rawHandle);
-        byte[] tokenBytes = serialize(tokenBundle);
+        byte[] tokenBytes = tokenBundleCodec.encode(tokenBundle);
         VersionedCryptoService.EncryptedValue encryptedTokens = cryptoService.encrypt("bff-token-bundle", tokenBytes);
         BffSessionEntity session = new BffSessionEntity(
                 java.util.UUID.randomUUID(),
@@ -69,7 +70,7 @@ public class BffSessionService {
     }
 
     @Transactional
-    public ResolvedSession resolve(String rawHandle) {
+    public ResolvedBffSession resolve(String rawHandle) {
         Instant now = clock.instant();
         BffSessionEntity session = sessionRepository
                 .findByHandleHash(
@@ -90,7 +91,7 @@ public class BffSessionService {
         Set<String> authorities = authorityRepository.findAllBySessionId(session.getSessionId()).stream()
                 .map(BffSessionAuthorityEntity::getAuthorityCode)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        return new ResolvedSession(
+        return new ResolvedBffSession(
                 new PrincipalContext(
                         session.getSessionId(),
                         session.getIssuer(),
@@ -101,35 +102,7 @@ public class BffSessionService {
                 csrfToken);
     }
 
-    private byte[] serialize(OidcTokenBundle tokenBundle) {
-        try (ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                DataOutputStream output = new DataOutputStream(bytes)) {
-            output.writeUTF(tokenBundle.idToken());
-            output.writeUTF(tokenBundle.accessToken());
-            output.writeBoolean(tokenBundle.refreshToken() != null);
-            if (tokenBundle.refreshToken() != null) {
-                output.writeUTF(tokenBundle.refreshToken());
-            }
-            output.flush();
-            return bytes.toByteArray();
-        } catch (IOException exception) {
-            throw new AuthenticationFailureException();
-        }
-    }
-
     private Instant min(Instant first, Instant second) {
         return first.isBefore(second) ? first : second;
     }
-
-    public record ResolvedSession(PrincipalContext principal, String csrfToken) {}
-
-    public record OidcTokenBundle(
-            String idToken, String accessToken, @Nullable String refreshToken) {}
-
-    public record ValidatedOidcPrincipal(
-            String issuer,
-            String subject,
-            @Nullable String oidcSessionId,
-            PrincipalKind kind,
-            Set<String> authorities) {}
 }

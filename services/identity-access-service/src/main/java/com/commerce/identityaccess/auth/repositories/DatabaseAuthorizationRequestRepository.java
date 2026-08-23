@@ -1,15 +1,14 @@
 package com.commerce.identityaccess.auth.repositories;
 
-import com.commerce.identityaccess.auth.configs.AuthProperties;
 import com.commerce.identityaccess.auth.exceptions.AuthenticationFailureException;
-import com.commerce.identityaccess.auth.services.VersionedCryptoService;
+import com.commerce.identityaccess.auth.services.OidcAuthorizationRequestFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
-import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.endpoint.PkceParameterNames;
+import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.stereotype.Component;
 
 /** Stores the one-time authorization request server-side; no OAuth state is placed in an HTTP session. */
@@ -18,14 +17,12 @@ public final class DatabaseAuthorizationRequestRepository
         implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
     public static final String NONCE_ATTRIBUTE = DatabaseAuthorizationRequestRepository.class.getName() + ".nonce";
     private final AuthTransactionStore transactionStore;
-    private final AuthProperties properties;
-    private final VersionedCryptoService cryptoService;
+    private final OidcAuthorizationRequestFactory authorizationRequestFactory;
 
     public DatabaseAuthorizationRequestRepository(
-            AuthTransactionStore transactionStore, AuthProperties properties, VersionedCryptoService cryptoService) {
+            AuthTransactionStore transactionStore, OidcAuthorizationRequestFactory authorizationRequestFactory) {
         this.transactionStore = transactionStore;
-        this.properties = properties;
-        this.cryptoService = cryptoService;
+        this.authorizationRequestFactory = authorizationRequestFactory;
     }
 
     @Override
@@ -44,15 +41,11 @@ public final class DatabaseAuthorizationRequestRepository
             return;
         }
         String state = authorizationRequest.getState();
-        String nonce = authorizationRequest.getAttribute("nonce");
-        String verifier = authorizationRequest.getAttribute("code_verifier");
+        String nonce = authorizationRequest.getAttribute(OidcParameterNames.NONCE);
+        String verifier = authorizationRequest.getAttribute(PkceParameterNames.CODE_VERIFIER);
         if (state == null || nonce == null || verifier == null) {
             throw new AuthenticationFailureException();
         }
-        create(state, nonce, verifier);
-    }
-
-    public void create(String state, String nonce, String verifier) {
         transactionStore.create(state, nonce, verifier);
     }
 
@@ -69,18 +62,6 @@ public final class DatabaseAuthorizationRequestRepository
     }
 
     private OAuth2AuthorizationRequest rebuild(String state, AuthTransactionStore.TransactionMaterial material) {
-        return OAuth2AuthorizationRequest.authorizationCode()
-                .authorizationUri(properties.publicIssuer() + "/protocol/openid-connect/auth")
-                .clientId(properties.clientId())
-                .redirectUri(properties.publicOrigin() + "/login/oauth2/code/keycloak")
-                .scopes(Set.of("openid", "roles"))
-                .state(state)
-                .attributes(attributes -> {
-                    attributes.put("code_verifier", material.verifier());
-                    attributes.put("nonce", material.nonce());
-                    attributes.put("registration_id", "keycloak");
-                })
-                .additionalParameters(Map.of("nonce", cryptoService.sha256Url(material.nonce())))
-                .build();
+        return authorizationRequestFactory.restore(state, material.nonce(), material.verifier());
     }
 }

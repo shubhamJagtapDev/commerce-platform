@@ -1,6 +1,7 @@
 package com.commerce.identityaccess.auth.exceptions;
 
 public final class AuthenticationFailureException extends RuntimeException {
+    private static final String SAFE_MESSAGE = "Authentication could not be completed";
     private final String code;
 
     public AuthenticationFailureException() {
@@ -8,7 +9,12 @@ public final class AuthenticationFailureException extends RuntimeException {
     }
 
     public AuthenticationFailureException(String code) {
-        super("Authentication could not be completed");
+        super(SAFE_MESSAGE);
+        this.code = code;
+    }
+
+    public AuthenticationFailureException(String code, Throwable cause) {
+        super(SAFE_MESSAGE, cause);
         this.code = code;
     }
 
