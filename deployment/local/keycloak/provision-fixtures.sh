@@ -44,4 +44,12 @@ ensure_user synthetic-non-maintainer "$IDENTITY_FIXTURE_NON_MAINTAINER_PASSWORD"
 ensure_user synthetic-maintainer "$IDENTITY_FIXTURE_MAINTAINER_PASSWORD" CATALOG_MAINTAINER
 ensure_user synthetic-lockout "$IDENTITY_FIXTURE_LOCKOUT_PASSWORD"
 
+maintainer_subject="$("$KCADM" get users -r commerce -q "username=synthetic-maintainer" \
+    | sed -n 's/.*"id" : "\([^"]*\)".*/\1/p' | head -n 1)"
+if [ -z "$maintainer_subject" ]; then
+    echo "Synthetic maintainer subject could not be resolved." >&2
+    exit 1
+fi
+printf '%s' "$maintainer_subject" > /opt/keycloak/fixture-output/commerce.catalog-security.fixture-subject
+
 echo "Keycloak private synthetic fixtures provisioned."

@@ -25,7 +25,9 @@ public class GatewayRouteManifestEndpoint {
                         "path", route.path(),
                         "access", route.access(),
                         "deadlineMs", route.deadline().toMillis(),
-                        "maxRequestBytes", route.maxRequestBytes()))
+                        "maxRequestBytes", route.maxRequestBytes(),
+                        "maxHeaderBytes", route.maxHeaderBytes(),
+                        "admissionCapacity", route.admissionCapacity()))
                 .toList();
         return Map.of("routeCount", routes.size(), "routes", routes);
     }

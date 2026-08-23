@@ -217,9 +217,18 @@ verify_id_token_claim_contract() {
       and .nonce == $nonce
       and (.realm_access.roles | index($expected_role) != null)
     ' "$token_payload" >/dev/null
-  verification_step="$name: validate access-token role scope contract"
-  jq -e --arg expected_role "$expected_role" \
-    '.realm_access.roles | index($expected_role) != null' "$access_token_payload" >/dev/null
+  verification_step="$name: validate access-token claim contract"
+  jq -e \
+    --arg issuer 'http://localhost:8082/realms/commerce' \
+    --arg client_id 'identity-access-bff' \
+    --arg audience 'catalog-api' \
+    --arg expected_role "$expected_role" '
+      .iss == $issuer
+      and (.sub | type == "string" and length > 0)
+      and (.aud | if type == "array" then index($audience) != null else . == $audience end)
+      and .azp == $client_id
+      and (.realm_access.roles | index($expected_role) != null)
+    ' "$access_token_payload" >/dev/null
 }
 
 verify_accepted_login() {
@@ -277,6 +286,83 @@ verify_accepted_login() {
     http://localhost:8080/bff/csrf
   verification_step="$name: validate CSRF response"
   jq -e 'keys == ["token"] and (.token | type == "string" and length > 0)' "$csrf_response" >/dev/null
+  verify_catalog_authorization_gate "$name" "$cookie_jar" "$csrf_response"
+}
+
+verify_catalog_authorization_gate() {
+  local name="$1"
+  local cookie_jar="$2"
+  local csrf_response="$3"
+  local csrf_token
+  local idempotency_key
+  local first_response="$temporary_dir/$name-catalog-probe-first.json"
+  local replay_response="$temporary_dir/$name-catalog-probe-replay.json"
+  local probe_headers="$temporary_dir/$name-catalog-probe.headers"
+  local first_status
+  local replay_status
+
+  csrf_token="$(jq -er '.token' "$csrf_response")"
+  idempotency_key="$(openssl rand -hex 16)"
+  verification_step="$name: invoke the catalog authorization probe"
+  first_status="$(curl --silent --show-error --max-time 5 \
+    --request POST \
+    --cookie "$cookie_jar" \
+    --header 'Content-Type: application/json' \
+    --header 'Origin: http://localhost:8080' \
+    --header 'Sec-Fetch-Site: same-origin' \
+    --header "X-CSRF-TOKEN: $csrf_token" \
+    --header "Idempotency-Key: $idempotency_key" \
+    --data '{"purpose":"COM_46_AUTHORIZATION_GATE"}' \
+    --dump-header "$probe_headers" \
+    --output "$first_response" \
+    --write-out '%{http_code}' \
+    http://localhost:8080/api/v1/catalog/authorization-probes)"
+
+  if [[ "$name" == "customer" ]]; then
+    if [[ "$first_status" != "403" ]]; then
+      printf 'Customer catalog probe returned HTTP %s with code %s.\n' \
+        "$first_status" "$(jq -r '.code // "missing"' "$first_response")" >&2
+      awk -F '\t' 'NF == 7 { print "Cookie metadata:", $1, $3, $4, $6 }' "$cookie_jar" >&2
+      if grep -qi '^set-cookie: commerce-session=;' "$probe_headers"; then
+        printf 'Identity Access cleared the BFF session during the probe.\n' >&2
+      fi
+      false
+    fi
+    jq -e '.status == 403 and .code == "FORBIDDEN"' "$first_response" >/dev/null
+    return
+  fi
+
+  if [[ "$name" != "maintainer" || "$first_status" != "201" ]]; then
+    printf 'Maintainer catalog probe returned HTTP %s with code %s and title %s.\n' \
+      "$first_status" \
+      "$(jq -r '.code // "missing"' "$first_response")" \
+      "$(jq -r '.title // "missing"' "$first_response")" >&2
+    jq -c . "$first_response" >&2 || true
+    false
+  fi
+  jq -e '.version == 0 and (.probeId | type == "string")' "$first_response" >/dev/null
+  verification_step="$name: replay the catalog authorization probe"
+  replay_status="$(curl --silent --show-error --max-time 5 \
+    --request POST \
+    --cookie "$cookie_jar" \
+    --header 'Content-Type: application/json' \
+    --header 'Origin: http://localhost:8080' \
+    --header 'Sec-Fetch-Site: same-origin' \
+    --header "X-CSRF-TOKEN: $csrf_token" \
+    --header "Idempotency-Key: $idempotency_key" \
+    --data '{"purpose":"COM_46_AUTHORIZATION_GATE"}' \
+    --output "$replay_response" \
+    --write-out '%{http_code}' \
+    http://localhost:8080/api/v1/catalog/authorization-probes)"
+  if [[ "$replay_status" != "200" ]]; then
+    printf 'Maintainer catalog probe replay returned HTTP %s with code %s and title %s.\n' \
+      "$replay_status" \
+      "$(jq -r '.code // "missing"' "$replay_response")" \
+      "$(jq -r '.title // "missing"' "$replay_response")" >&2
+    jq -c . "$replay_response" >&2 || true
+    false
+  fi
+  [[ "$(jq -er '.probeId' "$first_response")" == "$(jq -er '.probeId' "$replay_response")" ]]
 }
 
 verify_rejected_login() {

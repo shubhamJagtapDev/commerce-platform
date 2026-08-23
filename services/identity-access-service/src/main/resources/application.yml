@@ -66,7 +66,16 @@ commerce:
       hmac-key-id: ${IDENTITY_AUTH_HMAC_KEY_ID}
       hmac-key: ${IDENTITY_AUTH_HMAC_KEY}
   gateway:
-    routes: []
+    routes:
+      - id: catalog-authorization-probe
+        method: POST
+        path: /api/v1/catalog/authorization-probes
+        target: ${CATALOG_PRIVATE_URI:http://catalog-service:8081}
+        access: MAINTAINER
+        deadline: PT1S
+        max-request-bytes: 1024
+        max-header-bytes: 16384
+        admission-capacity: 20
 
 management:
   otlp:

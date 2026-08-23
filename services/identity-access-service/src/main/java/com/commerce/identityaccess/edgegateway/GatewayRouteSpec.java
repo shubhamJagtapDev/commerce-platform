@@ -10,7 +10,9 @@ public record GatewayRouteSpec(
         URI target,
         AccessClass access,
         Duration deadline,
-        long maxRequestBytes) {
+        long maxRequestBytes,
+        long maxHeaderBytes,
+        int admissionCapacity) {
 
     public enum AccessClass {
         PUBLIC,

@@ -22,6 +22,21 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${CATALOG_OIDC_ISSUER:http://localhost:8082/realms/commerce}
+          jwk-set-uri: ${CATALOG_OIDC_JWK_SET_URI:http://keycloak:8080/realms/commerce/protocol/openid-connect/certs}
+
+commerce:
+  catalog-security:
+    issuer: ${CATALOG_OIDC_ISSUER:http://localhost:8082/realms/commerce}
+    jwk-set-uri: ${CATALOG_OIDC_JWK_SET_URI:http://keycloak:8080/realms/commerce/protocol/openid-connect/certs}
+    audience: ${CATALOG_OIDC_AUDIENCE:catalog-api}
+    authorized-party: ${CATALOG_OIDC_AUTHORIZED_PARTY:identity-access-bff}
+    idempotency-hmac-key: ${CATALOG_IDEMPOTENCY_HMAC_KEY}
+    idempotency-retention: PT24H
 
 management:
   otlp:

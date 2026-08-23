@@ -73,4 +73,32 @@ jq -e '
     }
 ' <<<"$role_mappers" >/dev/null
 
-echo "Keycloak Gate 2 realm drift check: PASS"
+jq -e '
+  [ .[] | select(.name == "catalog-access-token-subject") ] as $mappers
+  | ($mappers | length) == 1
+    and $mappers[0].protocol == "openid-connect"
+    and $mappers[0].protocolMapper == "oidc-sub-mapper"
+    and $mappers[0].consentRequired == false
+    and $mappers[0].config == {
+      "access.token.claim": "true",
+      "lightweight.claim": "true",
+      "introspection.token.claim": "true"
+    }
+' <<<"$role_mappers" >/dev/null
+
+jq -e '
+  [ .[] | select(.name == "catalog-api-audience") ] as $mappers
+  | ($mappers | length) == 1
+    and $mappers[0].protocol == "openid-connect"
+    and $mappers[0].protocolMapper == "oidc-audience-mapper"
+    and $mappers[0].consentRequired == false
+    and $mappers[0].config == {
+      "included.client.audience": "catalog-api",
+      "access.token.claim": "true",
+      "id.token.claim": "false",
+      "introspection.token.claim": "true",
+      "userinfo.token.claim": "false"
+    }
+' <<<"$role_mappers" >/dev/null
+
+echo "Keycloak realm drift check: PASS"

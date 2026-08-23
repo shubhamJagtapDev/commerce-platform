@@ -38,6 +38,24 @@ class GatewayRouteValidatorTest {
                 .hasMessageContaining("Ambiguous");
     }
 
+    @Test
+    void rejectsRoutesWithoutAdmissionOrHeaderLimits() {
+        GatewayRouteSpec route = new GatewayRouteSpec(
+                "catalog",
+                "POST",
+                "/api/v1/catalog/authorization-probes",
+                URI.create("http://catalog-service:8081"),
+                GatewayRouteSpec.AccessClass.MAINTAINER,
+                Duration.ofSeconds(1),
+                1024,
+                0,
+                0);
+
+        assertThatThrownBy(() -> GatewayRouteValidator.validate(List.of(route)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("limits");
+    }
+
     private GatewayRouteSpec route(String id, String method, String path) {
         return new GatewayRouteSpec(
                 id,
@@ -46,6 +64,8 @@ class GatewayRouteValidatorTest {
                 URI.create("http://catalog-service:8081"),
                 GatewayRouteSpec.AccessClass.MAINTAINER,
                 Duration.ofSeconds(1),
-                1_048_576);
+                1_048_576,
+                16_384,
+                20);
     }
 }
