@@ -1,5 +1,7 @@
 package com.commerce.identityaccess.edgegateway;
 
+import com.commerce.identityaccess.edgegateway.config.GatewayRouteProperties;
+import com.commerce.identityaccess.edgegateway.config.GatewayRouteSpec;
 import java.util.List;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;

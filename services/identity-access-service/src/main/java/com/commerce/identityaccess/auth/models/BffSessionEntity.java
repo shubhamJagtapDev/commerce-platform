@@ -93,6 +93,14 @@ public class BffSessionEntity {
         return csrfHash;
     }
 
+    public String getEncryptionKeyId() {
+        return encryptionKeyId;
+    }
+
+    public byte[] getTokenBundleCiphertext() {
+        return tokenBundleCiphertext.clone();
+    }
+
     public String getPrincipalKind() {
         return principalKind;
     }

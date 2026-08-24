@@ -12,12 +12,15 @@ import com.commerce.identityaccess.auth.services.OidcBffAuthenticationSuccessHan
 import com.commerce.identityaccess.auth.services.SafeOidcAuthenticationFailureHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.context.NullSecurityContextRepository;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.savedrequest.NullRequestCache;
 
 @Configuration(proxyBeanMethods = false)
@@ -39,9 +42,10 @@ public class SecurityConfiguration {
         return http.securityContext(context -> context.securityContextRepository(new NullSecurityContextRepository()))
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .csrf(csrf -> csrf.csrfTokenRepository(new SessionBoundCsrfTokenRepository()))
-                .addFilterBefore(sessionFilter, AnonymousAuthenticationFilter.class)
-                .addFilterBefore(originFilter, CsrfFilter.class)
+                .csrf(csrf -> csrf.csrfTokenRepository(new SessionBoundCsrfTokenRepository())
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
+                .addFilterBefore(sessionFilter, CsrfFilter.class)
+                .addFilterAfter(originFilter, BffSessionAuthenticationFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health/**", "/actuator/info")
                         .permitAll()
@@ -55,6 +59,12 @@ public class SecurityConfiguration {
                         .permitAll()
                         .requestMatchers("/bff/csrf")
                         .authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/catalog/authorization-probes")
+                        .access((authentication, context) -> new AuthorizationDecision(context.getRequest()
+                                        .getAttribute(BffSessionAuthenticationFilter.RESOLVED_SESSION_ATTRIBUTE)
+                                != null))
+                        .requestMatchers("/api/v1/catalog/**")
+                        .permitAll()
                         .anyRequest()
                         .denyAll())
                 .oauth2Login(login -> login.authorizationEndpoint(
@@ -62,13 +72,40 @@ public class SecurityConfiguration {
                         .authorizedClientRepository(authorizedClientRepository)
                         .successHandler(successHandler)
                         .failureHandler(failureHandler))
-                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint((request, response, exception) -> {
-                    response.setStatus(401);
-                    response.setContentType("application/problem+json");
-                    response.getWriter()
-                            .write(
-                                    "{\"type\":\"urn:commerce:problem:missing-session\",\"title\":\"Authentication required\",\"status\":401}");
-                }))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, exception) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/problem+json");
+                            response.getWriter()
+                                    .write(
+                                            "{\"type\":\"urn:commerce:problem:missing-session\",\"title\":\"Authentication required\",\"status\":401,\"code\":\"AUTHENTICATION_REQUIRED\"}");
+                        })
+                        .accessDeniedHandler((request, response, exception) -> {
+                            boolean anonymous =
+                                    request.getAttribute(BffSessionAuthenticationFilter.RESOLVED_SESSION_ATTRIBUTE)
+                                            == null;
+                            if (anonymous) {
+                                response.setStatus(401);
+                                response.setContentType("application/problem+json");
+                                response.getWriter()
+                                        .write(
+                                                "{\"type\":\"urn:commerce:problem:missing-session\",\"title\":\"Authentication required\",\"status\":401,\"code\":\"AUTHENTICATION_REQUIRED\"}");
+                                return;
+                            }
+                            if (exception instanceof CsrfException) {
+                                response.setStatus(403);
+                                response.setContentType("application/problem+json");
+                                response.getWriter()
+                                        .write(
+                                                "{\"type\":\"urn:commerce:problem:csrf-rejected\",\"title\":\"Request rejected\",\"status\":403,\"code\":\"CSRF_REJECTED\"}");
+                                return;
+                            }
+                            response.setStatus(403);
+                            response.setContentType("application/problem+json");
+                            response.getWriter()
+                                    .write(
+                                            "{\"type\":\"urn:commerce:problem:forbidden\",\"title\":\"Forbidden\",\"status\":403,\"code\":\"FORBIDDEN\"}");
+                        }))
                 .build();
     }
 }

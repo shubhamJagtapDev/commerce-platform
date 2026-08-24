@@ -1,11 +1,56 @@
 openapi: 3.1.0
 info:
   title: Commerce Catalog API
-  version: 1.0.0-foundation
-  description: Gate 1 foundation contract. COM-46 adds one explicit protected probe before E1 lifecycle APIs.
+  version: 1.0.0
+  description: Catalog service contract including the COM-46 maintainer authorization probe.
 servers:
   - url: http://localhost:8081
 paths:
+  /api/v1/catalog/authorization-probes:
+    post:
+      operationId: createCatalogAuthorizationProbe
+      summary: Prove the catalog-maintainer authorization boundary.
+      security:
+        - catalogBearer: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: >-
+            Deduplicates the same command for 24 hours. Reuse with a different
+            request during that window is rejected; reuse after expiration is
+            treated as a new command.
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthorizationProbeRequest"
+      responses:
+        "201":
+          description: The authorized probe mutation was committed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationProbeResponse"
+        "200":
+          description: A completed probe was replayed with the same idempotency key and request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationProbeResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /actuator/health/liveness:
     get:
       operationId: catalogLiveness
@@ -20,3 +65,72 @@ paths:
           description: Service and owned database are ready.
         "503":
           description: The owned authoritative database is unavailable.
+components:
+  securitySchemes:
+    catalogBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AuthorizationProbeRequest:
+      type: object
+      additionalProperties: false
+      required: [purpose]
+      properties:
+        purpose:
+          type: string
+          const: COM_46_AUTHORIZATION_GATE
+    AuthorizationProbeResponse:
+      type: object
+      additionalProperties: false
+      required: [probeId, version, committedAt]
+      properties:
+        probeId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        committedAt:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        code:
+          type: string
+  responses:
+    InvalidRequest:
+      description: The request is malformed or violates the probe contract.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    AuthenticationRequired:
+      description: A valid Catalog access token is required.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Forbidden:
+      description: The authenticated principal has no active Catalog grant.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Conflict:
+      description: The unexpired idempotency key is already associated with another request.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"

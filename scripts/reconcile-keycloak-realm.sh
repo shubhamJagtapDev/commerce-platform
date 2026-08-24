@@ -54,36 +54,46 @@ curl --fail --silent --show-error --max-time 3 \
   --data "$client_payload" \
   "http://localhost:8082/admin/realms/commerce/clients/$client_id"
 
-role_mapper_payload="$(jq -c '
+reconcile_mapper() {
+  local mapper_name="$1"
+  local mapper_payload
+  local mapper_id
+
+  mapper_payload="$(jq -c --arg mapper_name "$mapper_name" '
   .clients[]
   | select(.clientId == "identity-access-bff")
   | .protocolMappers[]
-  | select(.name == "bff-id-token-realm-roles")
+  | select(.name == $mapper_name)
 ' deployment/local/keycloak/commerce-realm.json)"
-role_mapper_id="$(curl --fail --silent --show-error --max-time 3 \
+  mapper_id="$(curl --fail --silent --show-error --max-time 3 \
   -H "Authorization: Bearer $admin_token" \
   "http://localhost:8082/admin/realms/commerce/clients/$client_id/protocol-mappers/models" \
-  | jq -r '
-      [ .[] | select(.name == "bff-id-token-realm-roles") ]
+  | jq -r --arg mapper_name "$mapper_name" '
+      [ .[] | select(.name == $mapper_name) ]
       | if length == 0 then ""
         elif length == 1 then .[0].id
-        else error("BFF ID-token role mapper is duplicated")
+        else error("protocol mapper is duplicated: \($mapper_name)")
         end')"
 
-if [[ -z "$role_mapper_id" ]]; then
-  curl --fail --silent --show-error --max-time 3 \
-    -X POST \
-    -H "Authorization: Bearer $admin_token" \
-    -H 'Content-Type: application/json' \
-    --data "$role_mapper_payload" \
-    "http://localhost:8082/admin/realms/commerce/clients/$client_id/protocol-mappers/models"
-else
-  curl --fail --silent --show-error --max-time 3 \
-    -X PUT \
-    -H "Authorization: Bearer $admin_token" \
-    -H 'Content-Type: application/json' \
-    --data "$(jq -c --arg id "$role_mapper_id" '. + {id: $id}' <<<"$role_mapper_payload")" \
-    "http://localhost:8082/admin/realms/commerce/clients/$client_id/protocol-mappers/models/$role_mapper_id"
-fi
+  if [[ -z "$mapper_id" ]]; then
+    curl --fail --silent --show-error --max-time 3 \
+      -X POST \
+      -H "Authorization: Bearer $admin_token" \
+      -H 'Content-Type: application/json' \
+      --data "$mapper_payload" \
+      "http://localhost:8082/admin/realms/commerce/clients/$client_id/protocol-mappers/models"
+  else
+    curl --fail --silent --show-error --max-time 3 \
+      -X PUT \
+      -H "Authorization: Bearer $admin_token" \
+      -H 'Content-Type: application/json' \
+      --data "$(jq -c --arg id "$mapper_id" '. + {id: $id}' <<<"$mapper_payload")" \
+      "http://localhost:8082/admin/realms/commerce/clients/$client_id/protocol-mappers/models/$mapper_id"
+  fi
+}
+
+reconcile_mapper "catalog-access-token-subject"
+reconcile_mapper "bff-id-token-realm-roles"
+reconcile_mapper "catalog-api-audience"
 
 echo "Keycloak realm reconciled. Re-run ./dev verify before using the local stack."

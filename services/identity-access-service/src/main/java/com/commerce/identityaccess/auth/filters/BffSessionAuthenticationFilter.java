@@ -38,7 +38,9 @@ public final class BffSessionAuthenticationFilter extends OncePerRequestFilter {
                         .toList();
                 UsernamePasswordAuthenticationToken authentication =
                         UsernamePasswordAuthenticationToken.authenticated(session.principal(), null, authorities);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                var securityContext = SecurityContextHolder.createEmptyContext();
+                securityContext.setAuthentication(authentication);
+                SecurityContextHolder.setContext(securityContext);
                 request.setAttribute(RESOLVED_SESSION_ATTRIBUTE, session);
             } catch (MissingSessionException exception) {
                 cookieService.clear(response);

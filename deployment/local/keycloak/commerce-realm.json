@@ -45,6 +45,17 @@
       "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
       "protocolMappers": [
         {
+          "name": "catalog-access-token-subject",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "lightweight.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
           "name": "bff-id-token-realm-roles",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-realm-role-mapper",
@@ -68,7 +79,8 @@
             "included.client.audience": "catalog-api",
             "access.token.claim": "true",
             "id.token.claim": "false",
-            "introspection.token.claim": "true"
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "false"
           }
         }
       ]

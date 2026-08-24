@@ -11,12 +11,12 @@ import com.commerce.identityaccess.auth.models.ResolvedBffSession;
 import com.commerce.identityaccess.auth.models.ValidatedOidcPrincipal;
 import com.commerce.identityaccess.auth.repositories.BffSessionAuthorityRepository;
 import com.commerce.identityaccess.auth.repositories.BffSessionRepository;
-import jakarta.transaction.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BffSessionService {
@@ -100,6 +100,25 @@ public class BffSessionService {
                         session.getAuthenticatedAt(),
                         authorities),
                 csrfToken);
+    }
+
+    @Transactional(readOnly = true)
+    public String resolveMaintainerAccessToken(PrincipalContext principal) {
+        Instant now = clock.instant();
+        BffSessionEntity session =
+                sessionRepository.findById(principal.sessionId()).orElseThrow(MissingSessionException::new);
+        if (!"ACTIVE".equals(session.getStatus())
+                || !PrincipalKind.CATALOG_MAINTAINER.name().equals(session.getPrincipalKind())
+                || !session.getIssuer().equals(principal.issuer())
+                || !session.getSubject().equals(principal.subject())
+                || !session.getIdleExpiresAt().isAfter(now)
+                || !session.getAbsoluteExpiresAt().isAfter(now)
+                || !principal.authorities().contains("ROLE_CATALOG_MAINTAINER")) {
+            throw new MissingSessionException();
+        }
+        byte[] encodedTokens = cryptoService.decrypt(
+                "bff-token-bundle", session.getEncryptionKeyId(), session.getTokenBundleCiphertext());
+        return tokenBundleCodec.decode(encodedTokens).accessToken();
     }
 
     private Instant min(Instant first, Instant second) {

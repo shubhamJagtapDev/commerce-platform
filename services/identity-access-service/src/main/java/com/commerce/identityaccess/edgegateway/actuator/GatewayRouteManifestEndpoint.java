@@ -1,5 +1,6 @@
-package com.commerce.identityaccess.edgegateway;
+package com.commerce.identityaccess.edgegateway.actuator;
 
+import com.commerce.identityaccess.edgegateway.GatewayRouteRegistry;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
@@ -25,7 +26,9 @@ public class GatewayRouteManifestEndpoint {
                         "path", route.path(),
                         "access", route.access(),
                         "deadlineMs", route.deadline().toMillis(),
-                        "maxRequestBytes", route.maxRequestBytes()))
+                        "maxRequestBytes", route.maxRequestBytes(),
+                        "maxHeaderBytes", route.maxHeaderBytes(),
+                        "admissionCapacity", route.admissionCapacity()))
                 .toList();
         return Map.of("routeCount", routes.size(), "routes", routes);
     }

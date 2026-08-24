@@ -1,5 +1,7 @@
 package com.commerce.identityaccess.edgegateway;
 
+import com.commerce.identityaccess.edgegateway.config.GatewayRouteSpec;
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -42,12 +44,26 @@ public final class GatewayRouteValidator {
                 || route.deadline() == null
                 || route.deadline().isNegative()
                 || route.deadline().isZero()
-                || route.maxRequestBytes() < 1) {
+                || route.maxRequestBytes() < 1
+                || route.maxHeaderBytes() < 1
+                || route.admissionCapacity() < 1) {
             throw new IllegalStateException(
-                    "Every gateway route requires id, method, path, target, access, deadline, and size limit");
+                    "Every gateway route requires id, method, path, target, access, deadline, limits, and admission");
         }
-        if (!route.path().startsWith("/") || route.target().getScheme() == null) {
+        if (!route.path().startsWith("/")
+                || route.target().getScheme() == null
+                || !Set.of("http", "https").contains(route.target().getScheme())
+                || !Set.of("GET", "POST", "PUT", "PATCH", "DELETE").contains(route.method())) {
             throw new IllegalStateException("Gateway route path and target URI are invalid: " + route.id());
+        }
+        if (route.access() == GatewayRouteSpec.AccessClass.MAINTAINER
+                && !Duration.ofSeconds(1).equals(route.deadline())) {
+            throw new IllegalStateException("Maintainer Catalog routes require the reviewed one-second deadline");
+        }
+        String host = route.target().getHost();
+        if (host == null || !(host.equals("catalog-service") || host.equals("localhost") || host.equals("127.0.0.1"))) {
+            throw new IllegalStateException(
+                    "Gateway route target is not an approved private Catalog host: " + route.id());
         }
     }
 
