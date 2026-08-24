@@ -16,6 +16,10 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
+          description: >-
+            Deduplicates the same command for 24 hours. Reuse with a different
+            request during that window is rejected; reuse after expiration is
+            treated as a new command.
           schema:
             type: string
             minLength: 16
@@ -125,7 +129,7 @@ components:
           schema:
             $ref: "#/components/schemas/Problem"
     Conflict:
-      description: The idempotency key is already associated with another request.
+      description: The unexpired idempotency key is already associated with another request.
       content:
         application/problem+json:
           schema:

@@ -104,6 +104,32 @@ class CreateAuthorizationProbeTest {
     }
 
     @Test
+    void expiredClaimStartsANewAuthorizationProbe() {
+        CatalogMaintainerGrantEntity grant = new CatalogMaintainerGrantEntity(UUID.randomUUID(), ISSUER, SUBJECT, NOW);
+        CatalogCommandIdempotencyEntity expiredClaim = new CatalogCommandIdempotencyEntity(
+                UUID.randomUUID(),
+                ISSUER,
+                SUBJECT,
+                "CREATE_AUTHORIZATION_PROBE",
+                new byte[32],
+                new byte[32],
+                NOW.minus(Duration.ofHours(25)),
+                NOW.minus(Duration.ofHours(1)));
+        when(grantRepository.lockActive(ISSUER, SUBJECT)).thenReturn(Optional.of(grant));
+        when(idempotencyRepository.lockByScope(any(), any(), any(), any())).thenReturn(Optional.of(expiredClaim));
+        when(probeRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CreateAuthorizationProbe.Result result =
+                useCase.create(ISSUER, SUBJECT, IDEMPOTENCY_KEY, CreateAuthorizationProbe.PURPOSE);
+
+        assertThat(result.created()).isTrue();
+        assertThat(expiredClaim.completed()).isTrue();
+        assertThat(expiredClaim.expiredAt(NOW)).isFalse();
+        verify(idempotencyRepository, never()).save(any());
+        verify(probeRepository).save(any(CatalogAuthorizationProbeEntity.class));
+    }
+
+    @Test
     void invalidProbePurposeIsRejectedBeforeGrantLookup() {
         assertThatThrownBy(() -> useCase.create(ISSUER, SUBJECT, IDEMPOTENCY_KEY, "PRODUCT_CREATE"))
                 .isInstanceOf(IllegalArgumentException.class);

@@ -57,14 +57,18 @@ public class CreateAuthorizationProbe {
                 grantRepository.lockActive(issuer, subject).orElseThrow(CatalogAuthorizationException::new);
         byte[] keyHash = hasher.hash("catalog-idempotency-key", idempotencyKey);
         byte[] requestFingerprint = hasher.hash("catalog-authorization-probe", purpose);
+        Instant now = clock.instant();
         CatalogCommandIdempotencyEntity existing = idempotencyRepository
                 .lockByScope(issuer, subject, OPERATION_CODE, keyHash)
                 .orElse(null);
         if (existing != null) {
-            return replay(existing, requestFingerprint);
+            if (!existing.expiredAt(now)) {
+                return replay(existing, requestFingerprint);
+            }
+            existing.restart(requestFingerprint, now, now.plus(properties.idempotencyRetention()));
+            return createProbe(grant, existing, now);
         }
 
-        Instant now = clock.instant();
         CatalogCommandIdempotencyEntity claim = idempotencyRepository.save(new CatalogCommandIdempotencyEntity(
                 UUID.randomUUID(),
                 issuer,
@@ -74,6 +78,10 @@ public class CreateAuthorizationProbe {
                 requestFingerprint,
                 now,
                 now.plus(properties.idempotencyRetention())));
+        return createProbe(grant, claim, now);
+    }
+
+    private Result createProbe(CatalogMaintainerGrantEntity grant, CatalogCommandIdempotencyEntity claim, Instant now) {
         CatalogAuthorizationProbeEntity probe =
                 probeRepository.save(new CatalogAuthorizationProbeEntity(UUID.randomUUID(), grant.getId(), now));
         claim.complete(probe.getId(), now);

@@ -81,6 +81,17 @@ public class SecurityConfiguration {
                                             "{\"type\":\"urn:commerce:problem:missing-session\",\"title\":\"Authentication required\",\"status\":401,\"code\":\"AUTHENTICATION_REQUIRED\"}");
                         })
                         .accessDeniedHandler((request, response, exception) -> {
+                            boolean anonymous =
+                                    request.getAttribute(BffSessionAuthenticationFilter.RESOLVED_SESSION_ATTRIBUTE)
+                                            == null;
+                            if (anonymous) {
+                                response.setStatus(401);
+                                response.setContentType("application/problem+json");
+                                response.getWriter()
+                                        .write(
+                                                "{\"type\":\"urn:commerce:problem:missing-session\",\"title\":\"Authentication required\",\"status\":401,\"code\":\"AUTHENTICATION_REQUIRED\"}");
+                                return;
+                            }
                             if (exception instanceof CsrfException) {
                                 response.setStatus(403);
                                 response.setContentType("application/problem+json");
@@ -89,16 +100,11 @@ public class SecurityConfiguration {
                                                 "{\"type\":\"urn:commerce:problem:csrf-rejected\",\"title\":\"Request rejected\",\"status\":403,\"code\":\"CSRF_REJECTED\"}");
                                 return;
                             }
-                            boolean anonymous =
-                                    request.getAttribute(BffSessionAuthenticationFilter.RESOLVED_SESSION_ATTRIBUTE)
-                                            == null;
-                            response.setStatus(anonymous ? 401 : 403);
+                            response.setStatus(403);
                             response.setContentType("application/problem+json");
                             response.getWriter()
                                     .write(
-                                            anonymous
-                                                    ? "{\"type\":\"urn:commerce:problem:missing-session\",\"title\":\"Authentication required\",\"status\":401,\"code\":\"AUTHENTICATION_REQUIRED\"}"
-                                                    : "{\"type\":\"urn:commerce:problem:forbidden\",\"title\":\"Forbidden\",\"status\":403,\"code\":\"FORBIDDEN\"}");
+                                            "{\"type\":\"urn:commerce:problem:forbidden\",\"title\":\"Forbidden\",\"status\":403,\"code\":\"FORBIDDEN\"}");
                         }))
                 .build();
     }

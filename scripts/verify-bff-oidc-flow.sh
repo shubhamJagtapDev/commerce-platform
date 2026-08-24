@@ -297,12 +297,31 @@ verify_catalog_authorization_gate() {
   local idempotency_key
   local first_response="$temporary_dir/$name-catalog-probe-first.json"
   local replay_response="$temporary_dir/$name-catalog-probe-replay.json"
+  local rejected_csrf_response="$temporary_dir/$name-catalog-probe-rejected-csrf.json"
   local probe_headers="$temporary_dir/$name-catalog-probe.headers"
   local first_status
   local replay_status
+  local rejected_csrf_status
 
   csrf_token="$(jq -er '.token' "$csrf_response")"
   idempotency_key="$(openssl rand -hex 16)"
+  if [[ "$name" == "maintainer" ]]; then
+    verification_step="$name: reject the catalog probe with an invalid CSRF token"
+    rejected_csrf_status="$(curl --silent --show-error --max-time 5 \
+      --request POST \
+      --cookie "$cookie_jar" \
+      --header 'Content-Type: application/json' \
+      --header 'Origin: http://localhost:8080' \
+      --header 'Sec-Fetch-Site: same-origin' \
+      --header 'X-CSRF-TOKEN: invalid-csrf-token' \
+      --header "Idempotency-Key: $idempotency_key" \
+      --data '{"purpose":"COM_46_AUTHORIZATION_GATE"}' \
+      --output "$rejected_csrf_response" \
+      --write-out '%{http_code}' \
+      http://localhost:8080/api/v1/catalog/authorization-probes)"
+    [[ "$rejected_csrf_status" == "403" ]]
+    jq -e '.status == 403 and .code == "CSRF_REJECTED"' "$rejected_csrf_response" >/dev/null
+  fi
   verification_step="$name: invoke the catalog authorization probe"
   first_status="$(curl --silent --show-error --max-time 5 \
     --request POST \

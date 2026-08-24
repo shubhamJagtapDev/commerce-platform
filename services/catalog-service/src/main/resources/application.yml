@@ -37,6 +37,7 @@ commerce:
     authorized-party: ${CATALOG_OIDC_AUTHORIZED_PARTY:identity-access-bff}
     idempotency-hmac-key: ${CATALOG_IDEMPOTENCY_HMAC_KEY}
     idempotency-retention: PT24H
+    idempotency-cleanup-interval: ${CATALOG_IDEMPOTENCY_CLEANUP_INTERVAL:PT1H}
 
 management:
   otlp:

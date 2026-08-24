@@ -2,10 +2,12 @@ package com.commerce.catalog.catalogsecurity.repositories;
 
 import com.commerce.catalog.catalogsecurity.models.CatalogCommandIdempotencyEntity;
 import jakarta.persistence.LockModeType;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,4 +26,8 @@ public interface CatalogCommandIdempotencyRepository extends JpaRepository<Catal
             @Param("subject") String subject,
             @Param("operationCode") String operationCode,
             @Param("keyHash") byte[] keyHash);
+
+    @Modifying
+    @Query("delete from CatalogCommandIdempotencyEntity claim where claim.expiresAt <= :now")
+    int deleteExpiredAtOrBefore(@Param("now") Instant now);
 }

@@ -75,6 +75,10 @@ public class CatalogCommandIdempotencyEntity {
         return "COMPLETED".equals(status) && resultProbeId != null;
     }
 
+    public boolean expiredAt(Instant now) {
+        return !expiresAt.isAfter(now);
+    }
+
     @Nullable
     public UUID getResultProbeId() {
         return resultProbeId;
@@ -84,5 +88,14 @@ public class CatalogCommandIdempotencyEntity {
         status = "COMPLETED";
         resultProbeId = probeId;
         completedAt = now;
+    }
+
+    public void restart(byte[] newRequestFingerprint, Instant now, Instant newExpiresAt) {
+        requestFingerprint = newRequestFingerprint.clone();
+        status = "IN_PROGRESS";
+        resultProbeId = null;
+        createdAt = now;
+        completedAt = null;
+        expiresAt = newExpiresAt;
     }
 }
