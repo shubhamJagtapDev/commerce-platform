@@ -1,5 +1,6 @@
-package com.commerce.catalog.catalogsecurity;
+package com.commerce.catalog.catalogsecurity.repositories;
 
+import com.commerce.catalog.catalogsecurity.models.CatalogMaintainerGrantEntity;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
@@ -8,7 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-interface CatalogMaintainerGrantRepository extends JpaRepository<CatalogMaintainerGrantEntity, UUID> {
+public interface CatalogMaintainerGrantRepository extends JpaRepository<CatalogMaintainerGrantEntity, UUID> {
     Optional<CatalogMaintainerGrantEntity> findByIssuerAndSubject(String issuer, String subject);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

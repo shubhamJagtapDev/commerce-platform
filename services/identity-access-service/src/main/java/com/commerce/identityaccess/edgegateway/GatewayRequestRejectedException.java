@@ -6,7 +6,7 @@ public final class GatewayRequestRejectedException extends RuntimeException {
     private final HttpStatus status;
     private final String code;
 
-    GatewayRequestRejectedException(HttpStatus status, String code) {
+    public GatewayRequestRejectedException(HttpStatus status, String code) {
         super(code);
         this.status = status;
         this.code = code;

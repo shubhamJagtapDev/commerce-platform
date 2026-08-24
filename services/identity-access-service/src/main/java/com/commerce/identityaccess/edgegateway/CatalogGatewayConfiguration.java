@@ -6,6 +6,9 @@ import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouter
 import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
 
 import com.commerce.identityaccess.auth.services.BffSessionService;
+import com.commerce.identityaccess.edgegateway.config.GatewayRouteSpec;
+import com.commerce.identityaccess.edgegateway.filters.CatalogGatewayRequestFilter;
+import com.commerce.identityaccess.edgegateway.filters.GatewayAdmissionFilter;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import org.springframework.cloud.gateway.server.mvc.config.GatewayMvcProperties;

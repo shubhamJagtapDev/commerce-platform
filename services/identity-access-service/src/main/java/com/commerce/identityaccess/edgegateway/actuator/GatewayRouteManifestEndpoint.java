@@ -1,5 +1,6 @@
-package com.commerce.identityaccess.edgegateway;
+package com.commerce.identityaccess.edgegateway.actuator;
 
+import com.commerce.identityaccess.edgegateway.GatewayRouteRegistry;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;

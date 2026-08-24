@@ -1,4 +1,4 @@
-package com.commerce.catalog.catalogsecurity;
+package com.commerce.catalog.catalogsecurity.models;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 @Entity
 @Table(name = "catalog_maintainer_grant")
-class CatalogMaintainerGrantEntity {
+public class CatalogMaintainerGrantEntity {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
@@ -38,7 +38,7 @@ class CatalogMaintainerGrantEntity {
 
     protected CatalogMaintainerGrantEntity() {}
 
-    CatalogMaintainerGrantEntity(UUID id, String issuer, String subject, Instant now) {
+    public CatalogMaintainerGrantEntity(UUID id, String issuer, String subject, Instant now) {
         this.id = id;
         this.issuer = issuer;
         this.subject = subject;
@@ -48,7 +48,7 @@ class CatalogMaintainerGrantEntity {
         this.updatedAt = now;
     }
 
-    UUID getId() {
+    public UUID getId() {
         return id;
     }
 }

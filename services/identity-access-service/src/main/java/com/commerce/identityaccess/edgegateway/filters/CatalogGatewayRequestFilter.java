@@ -1,9 +1,11 @@
-package com.commerce.identityaccess.edgegateway;
+package com.commerce.identityaccess.edgegateway.filters;
 
 import com.commerce.identityaccess.auth.filters.BffSessionAuthenticationFilter;
 import com.commerce.identityaccess.auth.models.PrincipalContext;
 import com.commerce.identityaccess.auth.models.ResolvedBffSession;
 import com.commerce.identityaccess.auth.services.BffSessionService;
+import com.commerce.identityaccess.edgegateway.GatewayRequestRejectedException;
+import com.commerce.identityaccess.edgegateway.config.GatewayRouteSpec;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
@@ -12,14 +14,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.function.ServerRequest;
 
-final class CatalogGatewayRequestFilter implements Function<ServerRequest, ServerRequest> {
+public final class CatalogGatewayRequestFilter implements Function<ServerRequest, ServerRequest> {
     private static final List<String> RELAYED_HEADERS =
             List.of(HttpHeaders.ACCEPT, HttpHeaders.CONTENT_TYPE, "Idempotency-Key");
 
     private final GatewayRouteSpec route;
     private final BffSessionService sessionService;
 
-    CatalogGatewayRequestFilter(GatewayRouteSpec route, BffSessionService sessionService) {
+    public CatalogGatewayRequestFilter(GatewayRouteSpec route, BffSessionService sessionService) {
         this.route = route;
         this.sessionService = sessionService;
     }

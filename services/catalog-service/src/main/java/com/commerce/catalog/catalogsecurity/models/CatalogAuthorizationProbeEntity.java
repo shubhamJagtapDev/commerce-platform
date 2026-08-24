@@ -1,4 +1,4 @@
-package com.commerce.catalog.catalogsecurity;
+package com.commerce.catalog.catalogsecurity.models;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "catalog_authorization_probe")
-class CatalogAuthorizationProbeEntity {
+public class CatalogAuthorizationProbeEntity {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
@@ -25,22 +25,22 @@ class CatalogAuthorizationProbeEntity {
 
     protected CatalogAuthorizationProbeEntity() {}
 
-    CatalogAuthorizationProbeEntity(UUID id, UUID grantId, Instant committedAt) {
+    public CatalogAuthorizationProbeEntity(UUID id, UUID grantId, Instant committedAt) {
         this.id = id;
         this.grantId = grantId;
         this.version = 0;
         this.committedAt = committedAt;
     }
 
-    UUID getId() {
+    public UUID getId() {
         return id;
     }
 
-    long getVersion() {
+    public long getVersion() {
         return version;
     }
 
-    Instant getCommittedAt() {
+    public Instant getCommittedAt() {
         return committedAt;
     }
 }

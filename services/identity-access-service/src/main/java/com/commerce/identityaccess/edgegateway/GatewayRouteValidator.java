@@ -1,5 +1,6 @@
 package com.commerce.identityaccess.edgegateway;
 
+import com.commerce.identityaccess.edgegateway.config.GatewayRouteSpec;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;

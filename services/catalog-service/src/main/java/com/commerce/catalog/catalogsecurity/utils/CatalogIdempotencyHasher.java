@@ -1,5 +1,6 @@
-package com.commerce.catalog.catalogsecurity;
+package com.commerce.catalog.catalogsecurity.utils;
 
+import com.commerce.catalog.catalogsecurity.config.CatalogSecurityProperties;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
@@ -9,10 +10,10 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
 
 @Component
-final class CatalogIdempotencyHasher {
+public final class CatalogIdempotencyHasher {
     private final SecretKey key;
 
-    CatalogIdempotencyHasher(CatalogSecurityProperties properties) {
+    public CatalogIdempotencyHasher(CatalogSecurityProperties properties) {
         byte[] decodedKey;
         try {
             decodedKey = Base64.getDecoder().decode(properties.idempotencyHmacKey());
@@ -25,7 +26,7 @@ final class CatalogIdempotencyHasher {
         key = new SecretKeySpec(decodedKey, "HmacSHA256");
     }
 
-    byte[] hash(String purpose, String value) {
+    public byte[] hash(String purpose, String value) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(key);

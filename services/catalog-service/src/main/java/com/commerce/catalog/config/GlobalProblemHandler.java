@@ -1,7 +1,7 @@
 package com.commerce.catalog.config;
 
-import com.commerce.catalog.catalogsecurity.CatalogAuthorizationException;
-import com.commerce.catalog.catalogsecurity.IdempotencyConflictException;
+import com.commerce.catalog.catalogsecurity.exceptions.CatalogAuthorizationException;
+import com.commerce.catalog.catalogsecurity.exceptions.IdempotencyConflictException;
 import java.net.URI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

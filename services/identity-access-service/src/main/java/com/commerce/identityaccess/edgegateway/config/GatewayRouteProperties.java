@@ -1,4 +1,4 @@
-package com.commerce.identityaccess.edgegateway;
+package com.commerce.identityaccess.edgegateway.config;
 
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -3,6 +3,7 @@ package com.commerce.identityaccess.edgegateway;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.commerce.identityaccess.edgegateway.config.GatewayRouteSpec;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;

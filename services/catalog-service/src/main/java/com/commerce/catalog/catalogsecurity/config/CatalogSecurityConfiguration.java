@@ -1,4 +1,4 @@
-package com.commerce.catalog.catalogsecurity;
+package com.commerce.catalog.catalogsecurity.config;
 
 import java.time.Clock;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.commerce.catalog.catalogsecurity;
+package com.commerce.catalog.catalogsecurity.exceptions;
 
 public final class IdempotencyConflictException extends RuntimeException {
     public IdempotencyConflictException() {

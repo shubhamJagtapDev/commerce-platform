@@ -1,4 +1,4 @@
-package com.commerce.catalog.catalogsecurity;
+package com.commerce.catalog.catalogsecurity.exceptions;
 
 public final class CatalogAuthorizationException extends RuntimeException {
     public CatalogAuthorizationException() {

@@ -1,5 +1,8 @@
 package com.commerce.catalog.catalogsecurity;
 
+import com.commerce.catalog.catalogsecurity.config.CatalogSecurityProperties;
+import com.commerce.catalog.catalogsecurity.models.CatalogMaintainerGrantEntity;
+import com.commerce.catalog.catalogsecurity.repositories.CatalogMaintainerGrantRepository;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.boot.ApplicationArguments;

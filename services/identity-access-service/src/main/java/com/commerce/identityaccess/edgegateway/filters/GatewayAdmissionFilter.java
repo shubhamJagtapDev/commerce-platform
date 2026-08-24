@@ -1,5 +1,6 @@
-package com.commerce.identityaccess.edgegateway;
+package com.commerce.identityaccess.edgegateway.filters;
 
+import com.commerce.identityaccess.edgegateway.GatewayRequestRejectedException;
 import java.util.concurrent.Semaphore;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.function.HandlerFilterFunction;
@@ -7,10 +8,10 @@ import org.springframework.web.servlet.function.HandlerFunction;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
-final class GatewayAdmissionFilter implements HandlerFilterFunction<ServerResponse, ServerResponse> {
+public final class GatewayAdmissionFilter implements HandlerFilterFunction<ServerResponse, ServerResponse> {
     private final Semaphore admission;
 
-    GatewayAdmissionFilter(int capacity) {
+    public GatewayAdmissionFilter(int capacity) {
         admission = new Semaphore(capacity);
     }
 

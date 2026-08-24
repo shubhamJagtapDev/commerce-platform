@@ -1,5 +1,6 @@
-package com.commerce.catalog.catalogsecurity;
+package com.commerce.catalog.catalogsecurity.repositories;
 
+import com.commerce.catalog.catalogsecurity.models.CatalogCommandIdempotencyEntity;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
@@ -8,7 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-interface CatalogCommandIdempotencyRepository extends JpaRepository<CatalogCommandIdempotencyEntity, UUID> {
+public interface CatalogCommandIdempotencyRepository extends JpaRepository<CatalogCommandIdempotencyEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select claim

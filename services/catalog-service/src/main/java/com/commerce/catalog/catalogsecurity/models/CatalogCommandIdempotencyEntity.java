@@ -1,4 +1,4 @@
-package com.commerce.catalog.catalogsecurity;
+package com.commerce.catalog.catalogsecurity.models;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 @Entity
 @Table(name = "catalog_command_idempotency")
-class CatalogCommandIdempotencyEntity {
+public class CatalogCommandIdempotencyEntity {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
@@ -47,7 +47,7 @@ class CatalogCommandIdempotencyEntity {
 
     protected CatalogCommandIdempotencyEntity() {}
 
-    CatalogCommandIdempotencyEntity(
+    public CatalogCommandIdempotencyEntity(
             UUID id,
             String issuer,
             String subject,
@@ -67,20 +67,20 @@ class CatalogCommandIdempotencyEntity {
         this.expiresAt = expiresAt;
     }
 
-    byte[] getRequestFingerprint() {
+    public byte[] getRequestFingerprint() {
         return requestFingerprint.clone();
     }
 
-    boolean completed() {
+    public boolean completed() {
         return "COMPLETED".equals(status) && resultProbeId != null;
     }
 
     @Nullable
-    UUID getResultProbeId() {
+    public UUID getResultProbeId() {
         return resultProbeId;
     }
 
-    void complete(UUID probeId, Instant now) {
+    public void complete(UUID probeId, Instant now) {
         status = "COMPLETED";
         resultProbeId = probeId;
         completedAt = now;
