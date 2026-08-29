@@ -6,12 +6,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Getter;
 import org.jspecify.annotations.Nullable;
 
 @Entity
 @Table(name = "catalog_maintainer_grant")
 public class CatalogMaintainerGrantEntity {
     @Id
+    @Getter
     @Column(name = "id", nullable = false)
     private UUID id;
 
@@ -46,9 +48,5 @@ public class CatalogMaintainerGrantEntity {
         this.version = 0;
         this.createdAt = now;
         this.updatedAt = now;
-    }
-
-    public UUID getId() {
-        return id;
     }
 }

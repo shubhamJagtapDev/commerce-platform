@@ -6,12 +6,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Getter;
 import org.jspecify.annotations.Nullable;
 
 @Entity
 @Table(name = "bff_session")
 public class BffSessionEntity {
     @Id
+    @Getter
     @Column(name = "session_id", nullable = false)
     private UUID sessionId;
 
@@ -19,39 +21,48 @@ public class BffSessionEntity {
     private byte[] handleHash;
 
     @Column(name = "csrf_hash", nullable = false)
+    @Getter
     private byte[] csrfHash;
 
     @Column(name = "encryption_key_id", nullable = false)
+    @Getter
     private String encryptionKeyId;
 
     @Column(name = "token_bundle_ciphertext", nullable = false)
     private byte[] tokenBundleCiphertext;
 
     @Column(name = "principal_kind", nullable = false)
+    @Getter
     private String principalKind;
 
     @Column(name = "issuer", nullable = false)
+    @Getter
     private String issuer;
 
     @Column(name = "subject", nullable = false)
+    @Getter
     private String subject;
 
     @Column(name = "oidc_session_id")
     private @Nullable String oidcSessionId;
 
     @Column(name = "authenticated_at", nullable = false)
+    @Getter
     private Instant authenticatedAt;
 
     @Column(name = "last_seen_at", nullable = false)
     private Instant lastSeenAt;
 
     @Column(name = "idle_expires_at", nullable = false)
+    @Getter
     private Instant idleExpiresAt;
 
     @Column(name = "absolute_expires_at", nullable = false)
+    @Getter
     private Instant absoluteExpiresAt;
 
     @Column(name = "status", nullable = false)
+    @Getter
     private String status;
 
     protected BffSessionEntity() {}
@@ -85,48 +96,8 @@ public class BffSessionEntity {
         this.status = "ACTIVE";
     }
 
-    public UUID getSessionId() {
-        return sessionId;
-    }
-
-    public byte[] getCsrfHash() {
-        return csrfHash;
-    }
-
-    public String getEncryptionKeyId() {
-        return encryptionKeyId;
-    }
-
     public byte[] getTokenBundleCiphertext() {
         return tokenBundleCiphertext.clone();
-    }
-
-    public String getPrincipalKind() {
-        return principalKind;
-    }
-
-    public String getIssuer() {
-        return issuer;
-    }
-
-    public String getSubject() {
-        return subject;
-    }
-
-    public Instant getAuthenticatedAt() {
-        return authenticatedAt;
-    }
-
-    public Instant getIdleExpiresAt() {
-        return idleExpiresAt;
-    }
-
-    public Instant getAbsoluteExpiresAt() {
-        return absoluteExpiresAt;
-    }
-
-    public String getStatus() {
-        return status;
     }
 
     public void touch(Instant now, Instant newIdleExpiry) {

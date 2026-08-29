@@ -1,0 +1,36 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_HOST_PORT:55432}/identity_access?connectTimeout=2&socketTimeout=2&tcpKeepAlive=true
+  output:
+    ansi:
+      enabled: always
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            token-uri: http://localhost:8082/realms/commerce/protocol/openid-connect/token
+            user-info-uri: http://localhost:8082/realms/commerce/protocol/openid-connect/userinfo
+            jwk-set-uri: http://localhost:8082/realms/commerce/protocol/openid-connect/certs
+
+commerce:
+  auth:
+    private-discovery-uri: http://localhost:8082/realms/commerce/.well-known/openid-configuration
+    private-jwks-uri: http://localhost:8082/realms/commerce/protocol/openid-connect/certs
+  gateway:
+    routes:
+      - id: catalog-authorization-probe
+        method: POST
+        path: /api/v1/catalog/authorization-probes
+        target: http://localhost:8081
+        access: MAINTAINER
+        deadline: PT1S
+        max-request-bytes: 1024
+        max-header-bytes: 16384
+        admission-capacity: 20
+
+logging:
+  pattern:
+    console: "%green(%d{HH:mm:ss.SSS}) %blue(%-5level) %red([%thread]) %yellow(%logger{15}) - %msg%n"

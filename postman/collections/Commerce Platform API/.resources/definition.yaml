@@ -1,0 +1,15 @@
+$kind: collection
+name: Commerce Platform API
+description: Contract-driven requests for the Identity Access BFF and Catalog API. Includes the direct OIDC Authorization Code + PKCE resource-server path and the BFF session + CSRF path. See postman/README.md before running the collection.
+variables:
+  identityBaseUrl: http://localhost:8080
+  catalogBaseUrl: http://localhost:8081
+  keycloakBaseUrl: http://localhost:8082
+  realm: commerce
+  oidcClientId: identity-access-bff
+  catalogAudience: catalog-api
+  csrfToken: ""
+  idempotencyKey: ""
+  authorizationUrl: ""
+  keycloakLoginAction: ""
+  callbackUrl: ""

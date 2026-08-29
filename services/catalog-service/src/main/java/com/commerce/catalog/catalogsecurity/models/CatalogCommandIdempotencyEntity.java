@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Getter;
 import org.jspecify.annotations.Nullable;
 
 @Entity
@@ -34,6 +35,7 @@ public class CatalogCommandIdempotencyEntity {
     private String status;
 
     @Column(name = "result_probe_id")
+    @Getter
     private @Nullable UUID resultProbeId;
 
     @Column(name = "created_at", nullable = false)
@@ -77,11 +79,6 @@ public class CatalogCommandIdempotencyEntity {
 
     public boolean expiredAt(Instant now) {
         return !expiresAt.isAfter(now);
-    }
-
-    @Nullable
-    public UUID getResultProbeId() {
-        return resultProbeId;
     }
 
     public void complete(UUID probeId, Instant now) {

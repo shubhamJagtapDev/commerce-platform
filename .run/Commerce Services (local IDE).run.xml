@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Commerce Services (local IDE)" type="CompoundRunConfigurationType">
+    <toRun name="Identity Access Service (local IDE)" type="SpringBootApplicationConfigurationType" />
+    <toRun name="Catalog Service (local IDE)" type="SpringBootApplicationConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

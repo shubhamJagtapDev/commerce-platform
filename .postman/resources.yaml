@@ -1,0 +1,14 @@
+# Use this workspace to collaborate
+workspace:
+  id: f3d2e4ed-540c-4d52-8e23-6af06948787c
+
+localResources:
+  specs:
+    - ../contracts/openapi/catalog-v1.yaml
+    - ../contracts/openapi/identity-access-v1.yaml
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/Commerce Platform API: 7c08d6a1-35d9-4bb5-8b8a-0aabf5b6e2d1

@@ -1,0 +1,11 @@
+$kind: http-request
+description: "Contract: catalogReadiness"
+url: "{{catalogBaseUrl}}/actuator/health/readiness"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('returns HTTP 200 when ready', function () { pm.response.to.have.status(200); });
+      pm.test('reports readiness', function () { pm.expect(pm.response.json().status).to.eql('UP'); });
+    language: text/javascript
+order: 4000

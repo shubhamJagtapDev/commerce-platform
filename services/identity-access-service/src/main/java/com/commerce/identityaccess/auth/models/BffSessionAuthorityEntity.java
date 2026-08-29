@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import lombok.Getter;
 
 @Entity
 @Table(name = "bff_session_authority")
@@ -16,6 +17,7 @@ public class BffSessionAuthorityEntity {
     @Column(name = "session_id", nullable = false)
     private UUID sessionId;
 
+    @Getter
     @Column(name = "authority_code", nullable = false)
     private String authorityCode;
 
@@ -25,9 +27,5 @@ public class BffSessionAuthorityEntity {
         this.authorityId = UUID.randomUUID();
         this.sessionId = sessionId;
         this.authorityCode = authorityCode;
-    }
-
-    public String getAuthorityCode() {
-        return authorityCode;
     }
 }

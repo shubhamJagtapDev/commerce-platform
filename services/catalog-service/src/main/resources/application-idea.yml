@@ -1,0 +1,21 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_HOST_PORT:55432}/catalog?connectTimeout=2&socketTimeout=2&tcpKeepAlive=true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8082/realms/commerce/protocol/openid-connect/certs
+  output:
+    ansi:
+      enabled: always
+
+commerce:
+  catalog-security:
+    jwk-set-uri: http://localhost:8082/realms/commerce/protocol/openid-connect/certs
+
+logging:
+  pattern:
+    console: "%green(%d{HH:mm:ss.SSS}) %blue(%-5level) %red([%thread]) %yellow(%logger{15}) - %msg%n"

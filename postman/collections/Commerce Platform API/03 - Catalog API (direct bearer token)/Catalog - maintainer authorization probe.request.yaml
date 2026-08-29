@@ -1,0 +1,28 @@
+$kind: http-request
+description: "Expected: 201 on first use of the key, 200 when replayed with the same request. Run with a synthetic-maintainer token."
+url: "{{catalogBaseUrl}}/api/v1/catalog/authorization-probes"
+method: POST
+headers:
+  Content-Type: application/json
+  Idempotency-Key: "{{idempotencyKey}}"
+body:
+  type: json
+  content: |-
+    {
+        "purpose": "COM_46_AUTHORIZATION_GATE"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      if (!pm.environment.get('idempotencyKey')) {
+        pm.environment.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}').replace(/-/g, ''));
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('returns 201 for a new command or 200 for a replay', function () { pm.expect([200, 201]).to.include(pm.response.code); });
+      const body = pm.response.json();
+      pm.test('returns the probe contract', function () { pm.expect(body.probeId).to.match(/^[0-9a-f-]{36}$/i); pm.expect(body.version).to.be.a('number'); pm.expect(new Date(body.committedAt).toString()).not.to.eql('Invalid Date'); });
+      if (pm.response.code === 201) { pm.environment.set('probeId', body.probeId); }
+    language: text/javascript
+order: 2000

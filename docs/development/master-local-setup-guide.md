@@ -57,7 +57,7 @@ Auth and customer-account behavior remain separate modules inside Identity Acces
 | API documentation | Springdoc 3.0.3 with Swagger annotations/UI |
 | Persistence | Spring Data JPA, Hibernate validation, Flyway, PostgreSQL 18.4 |
 | Identity provider | Keycloak 26.7.0 |
-| Observability | Actuator, Micrometer/Prometheus, Spring Boot OpenTelemetry starter, ECS JSON stdout |
+| Observability | Actuator, Micrometer/Prometheus, Spring Boot OpenTelemetry starter, dev-friendly local console logs, ECS JSON stdout in staging/production |
 | Local orchestration | Docker Compose |
 
 Versions are centralized in `gradle/libs.versions.toml`, locked in per-service Gradle lockfiles, and pinned in container definitions. Upgrade them as one reviewed compatibility change and rerun the complete Gate 1 verification.
@@ -283,7 +283,8 @@ Then delete the local `.env` file using your normal recoverable file-management 
 - Actuator supplies health and standard framework instrumentation.
 - Micrometer exposes Prometheus metrics.
 - the Spring Boot OpenTelemetry starter provides the tracing foundation;
-- stdout uses structured ECS JSON;
+- `dev` and `idea` use colored human-readable console logs for local debugging;
+- `stg` and `prd` use structured ECS JSON stdout for ingestion;
 - local OTLP export is disabled until a collector is intentionally added;
 - development trace sampling is `1.0`; staging/production values must be bounded and configured;
 - readiness includes the owned authoritative database and fails closed;

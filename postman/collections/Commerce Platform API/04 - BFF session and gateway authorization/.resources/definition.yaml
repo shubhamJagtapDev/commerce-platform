@@ -1,0 +1,4 @@
+$kind: collection
+name: 04 - BFF session and gateway authorization
+description: BFF path. Do not use the OAuth 2.0 helper for this folder. Run the requests in order so Postman's cookie jar stores Keycloak cookies during login and the Identity Access commerce-session cookie after the callback. The gateway requires commerce-session, X-CSRF-TOKEN, same-origin Origin, and a maintainer session.
+order: 4000

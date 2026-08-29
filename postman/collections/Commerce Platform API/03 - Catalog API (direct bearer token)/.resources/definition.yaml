@@ -1,0 +1,19 @@
+$kind: collection
+description: "Resource-server path. This folder, not the whole collection, uses Postman's OAuth 2.0 helper for direct bearer-token calls. Configure/Get New Access Token with Authorization Code (With PKCE), callback URL allowed by the local Keycloak client, Auth URL {{keycloakBaseUrl}}/realms/{{realm}}/protocol/openid-connect/auth, Access Token URL {{keycloakBaseUrl}}/realms/{{realm}}/protocol/openid-connect/token, Client ID {{oidcClientId}}, scope openid roles, client authentication Send as Basic Auth header, and code challenge method S256. Sign in as synthetic-maintainer for the successful probe or synthetic-non-maintainer for the forbidden probe. This does not create the BFF commerce-session cookie."
+auth:
+  - id: 053bafba-dac2-451f-9899-230110b286a6
+    type: oauth2
+    name: oauth2 auth
+    credentials:
+      clientId: "{{oidcClientId}}"
+      accessTokenUrl: "{{keycloakBaseUrl}}/realms/{{realm}}/protocol/openid-connect/token"
+      authUrl: "{{keycloakBaseUrl}}/realms/{{realm}}/protocol/openid-connect/auth"
+      tokenName: commerce-local-oidc
+      addTokenTo: header
+      clientSecret: "{{identityClientSecret}}"
+      scope: openid roles
+      client_authentication: header
+      grant_type: authorization_code_with_pkce
+      challengeAlgorithm: S256
+      redirect_uri: "{{postmanOidcCallbackUrl}}"
+order: 3000

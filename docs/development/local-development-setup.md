@@ -16,13 +16,13 @@ For the complete developer handoff, decision register, troubleshooting guide, an
 | Persistence | Spring Data JPA + Hibernate; Flyway; PostgreSQL 18.4 | Product/setup decision. Hibernate validates but never creates production schema. |
 | Identity | Keycloak 26.7.0 | Version-pinned external OIDC provider with versioned realm/client import. |
 | API docs | Springdoc OpenAPI 3.0.3 + Swagger annotations/UI | Boot 4 line. Runtime UI is dev-only; checked-in OpenAPI remains the reviewed contract. |
-| Observability | Actuator, Micrometer, Prometheus registry, Boot OpenTelemetry starter, ECS JSON stdout | Standards-first instrumentation without a custom AOP telemetry layer or vendor lock-in. |
+| Observability | Actuator, Micrometer, Prometheus registry, Boot OpenTelemetry starter, dev-friendly local console logs, ECS JSON stdout in staging/production | Standards-first instrumentation without a custom AOP telemetry layer or vendor lock-in. |
 
 ## Configuration policy
 
 - YAML only: `application.yml` plus `application-dev.yml`, `application-stg.yml`, and `application-prd.yml` per service.
 - The base configuration contains no secret default. Credentials arrive through environment variables or a later approved secret manager.
-- `dev` enables Swagger UI and 100% trace sampling. `stg`/`prd` disable Swagger UI and use bounded configurable sampling.
+- `dev` enables Swagger UI, 100% trace sampling, and colored human-readable console logs. `idea` keeps the same local log format for IDE runs. `stg`/`prd` disable Swagger UI, use bounded configurable sampling, and emit ECS JSON stdout.
 - Do not add Spring Cloud Config yet: it would add an operational service before configuration scale or dynamic-refresh evidence justifies it.
 - `./dev start` generates `.env` once with OpenSSL, mode 600. Rotate locally by deleting `.env` and intentionally resetting the local volumes.
 

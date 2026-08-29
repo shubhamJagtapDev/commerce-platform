@@ -2,3 +2,8 @@ management:
   tracing:
     sampling:
       probability: ${TRACING_SAMPLE_PROBABILITY:0.25}
+
+logging:
+  structured:
+    format:
+      console: ecs
