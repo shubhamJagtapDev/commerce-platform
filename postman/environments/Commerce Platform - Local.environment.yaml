@@ -1,0 +1,30 @@
+name: Commerce Platform - Local
+values:
+  - key: identityBaseUrl
+    value: 'http://localhost:8080'
+  - key: catalogBaseUrl
+    value: 'http://localhost:8081'
+  - key: keycloakBaseUrl
+    value: 'http://localhost:8082'
+  - key: realm
+    value: commerce
+  - key: oidcClientId
+    value: identity-access-bff
+  - key: postmanOidcCallbackUrl
+    value: 'https://oauth.pstmn.io/v1/callback'
+  - key: bffUsername
+    value: synthetic-maintainer
+  - key: bffPassword
+    value: ''
+  - key: identityClientSecret
+    value: ''
+  - key: fixtureMaintainerPassword
+    value: ''
+  - key: fixtureNonMaintainerPassword
+    value: ''
+  - key: fixtureCustomerPassword
+    value: ''
+  - key: csrfToken
+    value: ''
+  - key: idempotencyKey
+    value: ''

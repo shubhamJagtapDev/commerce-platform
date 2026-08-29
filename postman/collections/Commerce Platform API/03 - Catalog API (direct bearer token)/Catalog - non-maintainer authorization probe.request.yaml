@@ -1,0 +1,20 @@
+$kind: http-request
+description: Run with a synthetic-non-maintainer token. The contract requires 403.
+url: "{{catalogBaseUrl}}/api/v1/catalog/authorization-probes"
+method: POST
+headers:
+  Content-Type: application/json
+  Idempotency-Key: "{{$guid}}"
+body:
+  type: json
+  content: |-
+    {
+        "purpose": "COM_46_AUTHORIZATION_GATE"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('returns HTTP 403', function () { pm.response.to.have.status(403); });
+      pm.test('returns a Problem response', function () { const body = pm.response.json(); pm.expect(body.status).to.eql(403); pm.expect(body.code).to.eql('FORBIDDEN'); });
+    language: text/javascript
+order: 3000

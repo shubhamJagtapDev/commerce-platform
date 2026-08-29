@@ -18,6 +18,8 @@ java {
 
 dependencies {
     compileOnly(libs.jspecify)
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
     errorprone(libs.error.prone.core)
     errorprone(libs.nullaway)
 

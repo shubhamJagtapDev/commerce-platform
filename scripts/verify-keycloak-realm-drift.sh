@@ -48,7 +48,11 @@ jq -e '
   and .implicitFlowEnabled == false
   and .directAccessGrantsEnabled == false
   and .serviceAccountsEnabled == false
-  and .redirectUris == ["http://localhost:8080/login/oauth2/code/keycloak"]
+  and (.redirectUris | sort) == ([
+    "http://localhost:8080/login/oauth2/code/keycloak",
+    "https://oauth.pstmn.io/v1/callback",
+    "https://oauth.pstmn.io/v1/browser-callback"
+  ] | sort)
   and .webOrigins == ["http://localhost:8080"]
   and (.defaultClientScopes | index("roles") != null)
   and .attributes["pkce.code.challenge.method"] == "S256"

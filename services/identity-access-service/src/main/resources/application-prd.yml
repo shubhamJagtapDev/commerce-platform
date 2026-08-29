@@ -3,6 +3,11 @@ management:
     sampling:
       probability: ${TRACING_SAMPLE_PROBABILITY:0.10}
 
+logging:
+  structured:
+    format:
+      console: ecs
+
 commerce:
   auth:
     session-cookie-name: __Host-commerce-session

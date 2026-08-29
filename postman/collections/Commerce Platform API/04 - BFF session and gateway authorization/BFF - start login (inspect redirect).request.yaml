@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{identityBaseUrl}}/bff/login"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: |-
+      pm.collectionVariables.unset('authorizationUrl');
+      pm.collectionVariables.unset('keycloakLoginAction');
+      pm.collectionVariables.unset('callbackUrl');
+      pm.environment.unset('csrfToken');
+      pm.environment.unset('idempotencyKey');
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('returns an authorization redirect', function () { pm.response.to.have.status(302); });
+      const location = pm.response.headers.get('Location');
+      const expectedAuthBase = pm.variables.replaceIn('{{keycloakBaseUrl}}/realms/{{realm}}/protocol/openid-connect/auth');
+      pm.test('redirect targets the configured Keycloak realm', function () { pm.expect(location).to.include(expectedAuthBase); });
+      pm.collectionVariables.set('authorizationUrl', location);
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 1000

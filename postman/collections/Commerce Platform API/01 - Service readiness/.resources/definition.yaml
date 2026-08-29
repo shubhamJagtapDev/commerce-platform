@@ -1,0 +1,3 @@
+$kind: collection
+description: Unauthenticated health checks from both OpenAPI contracts.
+order: 1000

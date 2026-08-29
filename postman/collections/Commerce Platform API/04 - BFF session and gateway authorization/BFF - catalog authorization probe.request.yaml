@@ -1,0 +1,33 @@
+$kind: http-request
+description: "Expected: 201 for synthetic-maintainer, 403 for synthetic-non-maintainer, 401 without a BFF session, and 403 CSRF_REJECTED for an invalid token."
+url: "{{identityBaseUrl}}/api/v1/catalog/authorization-probes"
+method: POST
+headers:
+  Content-Type: application/json
+  Origin: "{{identityBaseUrl}}"
+  Sec-Fetch-Site: same-origin
+  X-CSRF-TOKEN: "{{csrfToken}}"
+  Idempotency-Key: "{{idempotencyKey}}"
+body:
+  type: json
+  content: |-
+    {
+        "purpose": "COM_46_AUTHORIZATION_GATE"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      pm.test('csrfToken is available from the BFF CSRF request', function () {
+        pm.expect(pm.environment.get('csrfToken')).to.be.a('string').and.not.empty;
+      });
+      if (!pm.environment.get('idempotencyKey')) {
+        pm.environment.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}').replace(/-/g, ''));
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('returns an authorization outcome', function () { pm.expect([200, 201, 401, 403]).to.include(pm.response.code); });
+      if ([401, 403].includes(pm.response.code)) { const body = pm.response.json(); pm.expect(body.status).to.eql(pm.response.code); pm.expect(body.code).to.be.oneOf(['AUTHENTICATION_REQUIRED', 'FORBIDDEN', 'CSRF_REJECTED']); }
+      if ([200, 201].includes(pm.response.code)) { const body = pm.response.json(); pm.expect(body.probeId).to.match(/^[0-9a-f-]{36}$/i); pm.expect(body.version).to.be.a('number'); }
+    language: text/javascript
+order: 3000

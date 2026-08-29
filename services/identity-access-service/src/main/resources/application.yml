@@ -103,11 +103,6 @@ server:
   port: ${IDENTITY_HTTP_PORT:8080}
   shutdown: graceful
 
-logging:
-  structured:
-    format:
-      console: ecs
-
 springdoc:
   api-docs:
     enabled: false

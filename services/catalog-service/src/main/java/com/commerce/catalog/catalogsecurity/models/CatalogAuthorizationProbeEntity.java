@@ -6,11 +6,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Getter;
 
 @Entity
 @Table(name = "catalog_authorization_probe")
 public class CatalogAuthorizationProbeEntity {
     @Id
+    @Getter
     @Column(name = "id", nullable = false)
     private UUID id;
 
@@ -18,9 +20,11 @@ public class CatalogAuthorizationProbeEntity {
     private UUID grantId;
 
     @Column(name = "version", nullable = false)
+    @Getter
     private long version;
 
     @Column(name = "committed_at", nullable = false)
+    @Getter
     private Instant committedAt;
 
     protected CatalogAuthorizationProbeEntity() {}
@@ -30,17 +34,5 @@ public class CatalogAuthorizationProbeEntity {
         this.grantId = grantId;
         this.version = 0;
         this.committedAt = committedAt;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public long getVersion() {
-        return version;
-    }
-
-    public Instant getCommittedAt() {
-        return committedAt;
     }
 }

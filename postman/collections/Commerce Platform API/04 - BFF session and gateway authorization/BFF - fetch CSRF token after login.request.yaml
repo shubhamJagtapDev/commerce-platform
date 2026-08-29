@@ -1,0 +1,13 @@
+$kind: http-request
+description: Run only after the callback has created commerce-session in the Postman cookie jar.
+url: "{{identityBaseUrl}}/bff/csrf"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('authenticated session returns HTTP 200', function () { pm.response.to.have.status(200); });
+      const body = pm.response.json();
+      pm.test('returns a non-empty CSRF token', function () { pm.expect(body).to.have.keys(['token']); pm.expect(body.token).to.be.a('string').and.not.empty; });
+      pm.environment.set('csrfToken', body.token);
+    language: text/javascript
+order: 2000

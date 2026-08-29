@@ -1,0 +1,11 @@
+$kind: http-request
+description: "Contract: catalogLiveness"
+url: "{{catalogBaseUrl}}/actuator/health/liveness"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('returns HTTP 200', function () { pm.response.to.have.status(200); });
+      pm.test('reports a live service', function () { pm.expect(pm.response.json().status).to.eql('UP'); });
+    language: text/javascript
+order: 3000

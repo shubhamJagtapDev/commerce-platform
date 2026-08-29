@@ -1,0 +1,16 @@
+$kind: http-request
+description: Starts the BFF browser login. Keep redirects disabled to inspect the authorization request. For the complete browser flow, use this request in Postman with the cookie jar enabled, or open the returned Location in a browser and then return to the BFF callback.
+url: "{{identityBaseUrl}}/bff/login"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('redirects to Keycloak', function () { pm.response.to.have.status(302); });
+      const location = pm.response.headers.get('Location');
+      pm.test('authorization request uses code flow', function () { pm.expect(location).to.include('response_type=code'); });
+      pm.test('authorization request uses S256 PKCE', function () { pm.expect(location).to.include('code_challenge_method=S256'); });
+      pm.test('authorization request asks for openid and roles', function () { pm.expect(new URL(location).searchParams.get('scope').split(' ')).to.include.members(['openid', 'roles']); });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 2000

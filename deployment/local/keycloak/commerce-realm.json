@@ -35,7 +35,11 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["http://localhost:8080/login/oauth2/code/keycloak"],
+      "redirectUris": [
+        "http://localhost:8080/login/oauth2/code/keycloak",
+        "https://oauth.pstmn.io/v1/callback",
+        "https://oauth.pstmn.io/v1/browser-callback"
+      ],
       "webOrigins": ["http://localhost:8080"],
       "attributes": {
         "pkce.code.challenge.method": "S256",

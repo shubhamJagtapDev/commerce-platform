@@ -1,0 +1,3 @@
+$kind: collection
+description: Use the OAuth 2.0 helper on the Catalog requests below. In Postman, select Authorization > OAuth 2.0 > Get New Access Token. The helper opens Keycloak's login page, uses Authorization Code, and generates an S256 PKCE verifier/challenge.
+order: 2000

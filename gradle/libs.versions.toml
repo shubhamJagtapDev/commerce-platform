@@ -6,6 +6,7 @@ springdoc = "3.0.3"
 archunit = "1.4.2"
 error-prone = "2.50.0"
 jspecify = "1.0.0"
+lombok = "1.18.46"
 nullaway = "0.13.8"
 palantir-java-format = "2.96.0"
 spotless = "8.9.0"
@@ -16,6 +17,7 @@ springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
 error-prone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "error-prone" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
 
 [plugins]

@@ -1,0 +1,26 @@
+$kind: http-request
+description: Loads the Keycloak login form using the same Postman cookie jar created by the BFF authorization request.
+url: "{{authorizationUrl}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Keycloak login page returns HTTP 200', function () { pm.response.to.have.status(200); });
+      const html = pm.response.text();
+      const form = html.match(/<form\b[^>]*\bid=["']kc-form-login["'][^>]*>/i);
+      pm.test('Keycloak login form is present', function () { pm.expect(form).to.not.be.null; });
+      if (form) {
+        const action = form[0].match(/\baction=["']([^"']+)["']/i);
+        pm.test('Keycloak login form action is present', function () { pm.expect(action).to.not.be.null; });
+        if (action) {
+          const decodedAction = action[1].replace(/&amp;/g, '&');
+          const loginAction = decodedAction.startsWith('http')
+            ? decodedAction
+            : pm.variables.replaceIn('{{keycloakBaseUrl}}') + decodedAction;
+          pm.collectionVariables.set('keycloakLoginAction', loginAction);
+        }
+      }
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 1500

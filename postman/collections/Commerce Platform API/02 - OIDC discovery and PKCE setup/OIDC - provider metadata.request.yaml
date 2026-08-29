@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{keycloakBaseUrl}}/realms/{{realm}}/.well-known/openid-configuration"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('returns HTTP 200', function () { pm.response.to.have.status(200); });
+      const metadata = pm.response.json();
+      pm.test('issuer matches the local realm', function () { pm.expect(metadata.issuer).to.eql(pm.variables.replaceIn('{{keycloakBaseUrl}}/realms/{{realm}}')); });
+      pm.test('publishes authorization and token endpoints', function () { pm.expect(metadata.authorization_endpoint).to.be.a('string'); pm.expect(metadata.token_endpoint).to.be.a('string'); });
+      pm.test('supports S256 PKCE', function () { pm.expect(metadata.code_challenge_methods_supported).to.include('S256'); });
+    language: text/javascript
+order: 1000
