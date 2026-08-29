@@ -19,6 +19,17 @@ commerce:
   auth:
     private-discovery-uri: http://localhost:8082/realms/commerce/.well-known/openid-configuration
     private-jwks-uri: http://localhost:8082/realms/commerce/protocol/openid-connect/certs
+  gateway:
+    routes:
+      - id: catalog-authorization-probe
+        method: POST
+        path: /api/v1/catalog/authorization-probes
+        target: http://localhost:8081
+        access: MAINTAINER
+        deadline: PT1S
+        max-request-bytes: 1024
+        max-header-bytes: 16384
+        admission-capacity: 20
 
 logging:
   pattern:

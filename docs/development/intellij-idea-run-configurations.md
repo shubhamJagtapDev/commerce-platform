@@ -25,7 +25,7 @@ scripts/init-local-env.sh
 docker compose --env-file .env -f deployment/local/compose.yaml up --build -d postgres keycloak keycloak-fixtures
 ```
 
-Then open the repository in IntelliJ IDEA and use one of the shared run configurations:
+Then open the repository in IntelliJ IDEA and use one of the shared run configurations committed under `.run/`:
 
 - `Identity Access Service (local IDE)`
 - `Catalog Service (local IDE)`
