@@ -19,7 +19,8 @@ curl --fail --silent --show-error --max-time 3 \
   -H "Authorization: Bearer $admin_token" \
   -H 'Content-Type: application/json' \
   --data '{
-    "registrationAllowed": false,
+    "registrationAllowed": true,
+    "defaultRoles": ["CUSTOMER"],
     "rememberMe": false,
     "bruteForceProtected": true,
     "permanentLockout": false,

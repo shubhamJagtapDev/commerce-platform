@@ -23,3 +23,8 @@ springdoc:
     enabled: true
     path: /swagger-ui.html
     try-it-out-enabled: false
+
+commerce:
+  auth:
+    registration:
+      enabled: true

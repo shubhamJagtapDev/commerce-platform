@@ -37,6 +37,9 @@ ensure_user() {
     if [ -n "$role" ]; then
         "$KCADM" add-roles -r commerce --uusername "$username" --rolename "$role"
     fi
+    if [ "$role" != "CUSTOMER" ]; then
+        "$KCADM" remove-roles -r commerce --uusername "$username" --rolename CUSTOMER || true
+    fi
 }
 
 ensure_user synthetic-customer "$IDENTITY_FIXTURE_CUSTOMER_PASSWORD" CUSTOMER

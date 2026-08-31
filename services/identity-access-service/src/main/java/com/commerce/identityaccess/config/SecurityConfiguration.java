@@ -55,7 +55,7 @@ public class SecurityConfiguration {
                         .permitAll()
                         .requestMatchers("/api/*/foundation")
                         .permitAll()
-                        .requestMatchers("/bff/login", "/login/oauth2/code/keycloak")
+                        .requestMatchers("/bff/login", "/bff/register", "/login/oauth2/code/keycloak")
                         .permitAll()
                         .requestMatchers("/bff/csrf")
                         .authenticated()
@@ -76,6 +76,7 @@ public class SecurityConfiguration {
                         .authenticationEntryPoint((request, response, exception) -> {
                             response.setStatus(401);
                             response.setContentType("application/problem+json");
+                            response.setHeader("Cache-Control", "no-store");
                             response.getWriter()
                                     .write(
                                             "{\"type\":\"urn:commerce:problem:missing-session\",\"title\":\"Authentication required\",\"status\":401,\"code\":\"AUTHENTICATION_REQUIRED\"}");
@@ -87,6 +88,7 @@ public class SecurityConfiguration {
                             if (anonymous) {
                                 response.setStatus(401);
                                 response.setContentType("application/problem+json");
+                                response.setHeader("Cache-Control", "no-store");
                                 response.getWriter()
                                         .write(
                                                 "{\"type\":\"urn:commerce:problem:missing-session\",\"title\":\"Authentication required\",\"status\":401,\"code\":\"AUTHENTICATION_REQUIRED\"}");
@@ -95,6 +97,7 @@ public class SecurityConfiguration {
                             if (exception instanceof CsrfException) {
                                 response.setStatus(403);
                                 response.setContentType("application/problem+json");
+                                response.setHeader("Cache-Control", "no-store");
                                 response.getWriter()
                                         .write(
                                                 "{\"type\":\"urn:commerce:problem:csrf-rejected\",\"title\":\"Request rejected\",\"status\":403,\"code\":\"CSRF_REJECTED\"}");
@@ -102,6 +105,7 @@ public class SecurityConfiguration {
                             }
                             response.setStatus(403);
                             response.setContentType("application/problem+json");
+                            response.setHeader("Cache-Control", "no-store");
                             response.getWriter()
                                     .write(
                                             "{\"type\":\"urn:commerce:problem:forbidden\",\"title\":\"Forbidden\",\"status\":403,\"code\":\"FORBIDDEN\"}");

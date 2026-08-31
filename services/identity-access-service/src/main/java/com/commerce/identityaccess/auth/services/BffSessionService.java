@@ -4,6 +4,7 @@ import com.commerce.identityaccess.auth.configs.AuthProperties;
 import com.commerce.identityaccess.auth.exceptions.MissingSessionException;
 import com.commerce.identityaccess.auth.models.BffSessionAuthorityEntity;
 import com.commerce.identityaccess.auth.models.BffSessionEntity;
+import com.commerce.identityaccess.auth.models.CreatedBffSession;
 import com.commerce.identityaccess.auth.models.OidcTokenBundle;
 import com.commerce.identityaccess.auth.models.PrincipalContext;
 import com.commerce.identityaccess.auth.models.PrincipalKind;
@@ -11,10 +12,14 @@ import com.commerce.identityaccess.auth.models.ResolvedBffSession;
 import com.commerce.identityaccess.auth.models.ValidatedOidcPrincipal;
 import com.commerce.identityaccess.auth.repositories.BffSessionAuthorityRepository;
 import com.commerce.identityaccess.auth.repositories.BffSessionRepository;
+import com.commerce.identityaccess.customeraccount.models.CustomerAccount;
+import com.commerce.identityaccess.customeraccount.services.CustomerAccountService;
+import com.commerce.identityaccess.customeraccount.services.PrincipalAccessService;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +30,8 @@ public class BffSessionService {
     private final VersionedCryptoService cryptoService;
     private final TokenBundleCodec tokenBundleCodec;
     private final AuthProperties properties;
+    private final CustomerAccountService customerAccountService;
+    private final PrincipalAccessService principalAccessService;
     private final Clock clock;
 
     BffSessionService(
@@ -33,18 +40,27 @@ public class BffSessionService {
             VersionedCryptoService cryptoService,
             TokenBundleCodec tokenBundleCodec,
             AuthProperties properties,
+            CustomerAccountService customerAccountService,
+            PrincipalAccessService principalAccessService,
             Clock clock) {
         this.sessionRepository = sessionRepository;
         this.authorityRepository = authorityRepository;
         this.cryptoService = cryptoService;
         this.tokenBundleCodec = tokenBundleCodec;
         this.properties = properties;
+        this.customerAccountService = customerAccountService;
+        this.principalAccessService = principalAccessService;
         this.clock = clock;
     }
 
     @Transactional
-    public String create(ValidatedOidcPrincipal principal, OidcTokenBundle tokenBundle) {
+    public CreatedBffSession create(ValidatedOidcPrincipal principal, OidcTokenBundle tokenBundle) {
         Instant now = clock.instant();
+        CustomerAccount customerAccount = principal.kind() == PrincipalKind.CUSTOMER
+                ? customerAccountService.establish(principal.issuer(), principal.subject())
+                : null;
+        UUID accountId = customerAccount == null ? null : customerAccount.accountId();
+        Long securityEpoch = customerAccount == null ? null : customerAccount.securityEpoch();
         String rawHandle = cryptoService.randomUrlValue();
         String csrfToken = cryptoService.csrfToken(rawHandle);
         byte[] tokenBytes = tokenBundleCodec.encode(tokenBundle);
@@ -58,6 +74,8 @@ public class BffSessionService {
                 principal.kind(),
                 principal.issuer(),
                 principal.subject(),
+                accountId,
+                securityEpoch,
                 principal.oidcSessionId(),
                 now,
                 min(now.plus(properties.sessionIdleTtl()), now.plus(properties.sessionAbsoluteTtl())),
@@ -66,7 +84,17 @@ public class BffSessionService {
         authorityRepository.saveAll(principal.authorities().stream()
                 .map(authority -> new BffSessionAuthorityEntity(session.getSessionId(), authority))
                 .toList());
-        return rawHandle;
+        return new CreatedBffSession(
+                rawHandle,
+                new PrincipalContext(
+                        session.getSessionId(),
+                        principal.issuer(),
+                        principal.subject(),
+                        principal.kind(),
+                        accountId,
+                        securityEpoch,
+                        now,
+                        principal.authorities()));
     }
 
     @Transactional
@@ -87,19 +115,23 @@ public class BffSessionService {
                 cryptoService.hmac("bff-csrf-verifier", csrfToken.getBytes(StandardCharsets.US_ASCII)))) {
             throw new MissingSessionException();
         }
-        session.touch(now, min(now.plus(properties.sessionIdleTtl()), session.getAbsoluteExpiresAt()));
         Set<String> authorities = authorityRepository.findAllBySessionId(session.getSessionId()).stream()
                 .map(BffSessionAuthorityEntity::getAuthorityCode)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        return new ResolvedBffSession(
-                new PrincipalContext(
-                        session.getSessionId(),
-                        session.getIssuer(),
-                        session.getSubject(),
-                        PrincipalKind.valueOf(session.getPrincipalKind()),
-                        session.getAuthenticatedAt(),
-                        authorities),
-                csrfToken);
+        PrincipalContext principal = new PrincipalContext(
+                session.getSessionId(),
+                session.getIssuer(),
+                session.getSubject(),
+                PrincipalKind.valueOf(session.getPrincipalKind()),
+                session.getAccountId(),
+                session.getSecurityEpoch(),
+                session.getAuthenticatedAt(),
+                authorities);
+        if (principal.kind() == PrincipalKind.CUSTOMER) {
+            principalAccessService.requireActiveCustomer(principal);
+        }
+        session.touch(now, min(now.plus(properties.sessionIdleTtl()), session.getAbsoluteExpiresAt()));
+        return new ResolvedBffSession(principal, csrfToken);
     }
 
     @Transactional(readOnly = true)

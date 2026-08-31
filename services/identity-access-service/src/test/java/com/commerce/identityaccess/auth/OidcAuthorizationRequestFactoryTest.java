@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.commerce.identityaccess.auth.configs.AuthProperties;
+import com.commerce.identityaccess.auth.models.AuthFlowKind;
 import com.commerce.identityaccess.auth.services.OidcAuthorizationRequestFactory;
 import com.commerce.identityaccess.auth.services.VersionedCryptoService;
 import java.time.Duration;
@@ -21,7 +22,7 @@ class OidcAuthorizationRequestFactoryTest {
         VersionedCryptoService cryptoService = new VersionedCryptoService(properties());
         OidcAuthorizationRequestFactory factory = new OidcAuthorizationRequestFactory(properties(), cryptoService);
 
-        OAuth2AuthorizationRequest request = factory.restore("state", "nonce", "verifier");
+        OAuth2AuthorizationRequest request = factory.restore("state", "nonce", "verifier", AuthFlowKind.LOGIN);
 
         assertEquals(Set.of("openid", "roles"), request.getScopes());
         assertEquals("keycloak", request.getAttribute(OAuth2ParameterNames.REGISTRATION_ID));
@@ -34,6 +35,19 @@ class OidcAuthorizationRequestFactoryTest {
                 cryptoService.sha256Url("verifier"),
                 request.getAdditionalParameters().get(PkceParameterNames.CODE_CHALLENGE));
         assertEquals("S256", request.getAdditionalParameters().get(PkceParameterNames.CODE_CHALLENGE_METHOD));
+    }
+
+    @Test
+    void registrationRequestUsesTheHostedRegistrationPrompt() {
+        OidcAuthorizationRequestFactory factory =
+                new OidcAuthorizationRequestFactory(properties(), new VersionedCryptoService(properties()));
+
+        OAuth2AuthorizationRequest request = factory.createRegistrationRequest();
+
+        assertEquals(
+                AuthFlowKind.CUSTOMER_REGISTRATION,
+                request.getAttribute(OidcAuthorizationRequestFactory.FLOW_KIND_ATTRIBUTE));
+        assertEquals("create", request.getAdditionalParameters().get("prompt"));
     }
 
     @Test
@@ -61,6 +75,7 @@ class OidcAuthorizationRequestFactoryTest {
                 Duration.ofMinutes(10),
                 Duration.ofMinutes(30),
                 Duration.ofHours(8),
+                new AuthProperties.Registration(true, 5, Duration.ofHours(1)),
                 new AuthProperties.Crypto("local-aes-2026-01", key, "local-hmac-2026-01", key));
     }
 }

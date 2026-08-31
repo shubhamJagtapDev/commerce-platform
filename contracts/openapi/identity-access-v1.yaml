@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Commerce Identity Access API
   version: 1.0.0
-  description: Versioned Identity Access boundary. Gate 2 provides authentication-only BFF sessions; account binding is deferred.
+  description: Versioned Identity Access boundary with BFF authentication and principal-derived customer account binding.
 servers:
   - url: http://localhost:8080
 paths:
@@ -15,6 +15,23 @@ paths:
           description: Browser redirect to the authorization endpoint.
         "401":
           $ref: "#/components/responses/AuthenticationFailed"
+        "503":
+          $ref: "#/components/responses/KeycloakUnavailable"
+  /bff/register:
+    get:
+      operationId: beginCustomerRegistration
+      summary: Start bounded Keycloak-hosted customer registration using Authorization Code with PKCE.
+      responses:
+        "302":
+          description: Browser redirect to the hosted registration flow.
+        "404":
+          description: Registration is disabled in this environment.
+        "429":
+          description: The direct peer exceeded the bounded registration-start rate.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
         "503":
           $ref: "#/components/responses/KeycloakUnavailable"
   /login/oauth2/code/keycloak:

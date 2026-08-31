@@ -2,6 +2,7 @@ package com.commerce.identityaccess.auth.repositories;
 
 import com.commerce.identityaccess.auth.configs.AuthProperties;
 import com.commerce.identityaccess.auth.exceptions.AuthenticationFailureException;
+import com.commerce.identityaccess.auth.models.AuthFlowKind;
 import com.commerce.identityaccess.auth.services.VersionedCryptoService;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
@@ -28,7 +29,7 @@ public class AuthTransactionStore {
         this.clock = clock;
     }
 
-    void create(String state, String nonce, String verifier) {
+    void create(String state, String nonce, String verifier, AuthFlowKind flowKind) {
         Instant now = clock.instant();
         VersionedCryptoService.EncryptedValue encryptedNonce =
                 cryptoService.encrypt("oidc-transaction-nonce", nonce.getBytes(StandardCharsets.UTF_8));
@@ -40,12 +41,13 @@ public class AuthTransactionStore {
                 insert into auth_transaction (
                     state_hash, encryption_key_id, nonce_ciphertext, pkce_verifier_ciphertext,
                     flow_kind, return_target, created_at, expires_at)
-                values (?, ?, ?, ?, 'LOGIN', '/bff/csrf', ?, ?)
+                values (?, ?, ?, ?, ?, '/bff/csrf', ?, ?)
                 """,
                 encryptedODICState,
                 encryptedNonce.keyId(),
                 encryptedNonce.ciphertext(),
                 encryptedVerifier.ciphertext(),
+                flowKind.name(),
                 Timestamp.from(now),
                 Timestamp.from(now.plus(properties.transactionTtl())));
     }
@@ -61,7 +63,7 @@ public class AuthTransactionStore {
                 update auth_transaction
                 set consumed_at = ?
                 where state_hash = ? and consumed_at is null and expires_at > ?
-                returning encryption_key_id, nonce_ciphertext, pkce_verifier_ciphertext
+                returning encryption_key_id, nonce_ciphertext, pkce_verifier_ciphertext, flow_kind
                 """,
                 this::mapMaterial,
                 Timestamp.from(now),
@@ -77,7 +79,7 @@ public class AuthTransactionStore {
         Instant now = clock.instant();
         List<TransactionMaterial> transactions = jdbcTemplate.query(
                 """
-                select encryption_key_id, nonce_ciphertext, pkce_verifier_ciphertext
+                select encryption_key_id, nonce_ciphertext, pkce_verifier_ciphertext, flow_kind
                 from auth_transaction
                 where state_hash = ? and consumed_at is null and expires_at > ?
                 """,
@@ -96,8 +98,10 @@ public class AuthTransactionStore {
         byte[] verifier =
                 cryptoService.decrypt("oidc-transaction-pkce", keyId, resultSet.getBytes("pkce_verifier_ciphertext"));
         return new TransactionMaterial(
-                new String(nonce, StandardCharsets.UTF_8), new String(verifier, StandardCharsets.UTF_8));
+                new String(nonce, StandardCharsets.UTF_8),
+                new String(verifier, StandardCharsets.UTF_8),
+                AuthFlowKind.valueOf(resultSet.getString("flow_kind")));
     }
 
-    record TransactionMaterial(String nonce, String verifier) {}
+    record TransactionMaterial(String nonce, String verifier, AuthFlowKind flowKind) {}
 }

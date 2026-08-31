@@ -1,14 +1,19 @@
 package com.commerce.identityaccess.auth.services;
 
 import com.commerce.identityaccess.auth.exceptions.AuthenticationFailureException;
+import com.commerce.identityaccess.auth.models.AuthFlowKind;
+import com.commerce.identityaccess.auth.models.CreatedBffSession;
 import com.commerce.identityaccess.auth.models.OidcTokenBundle;
+import com.commerce.identityaccess.auth.models.PrincipalKind;
 import com.commerce.identityaccess.auth.models.ValidatedOidcPrincipal;
 import com.commerce.identityaccess.auth.repositories.DatabaseAuthorizationRequestRepository;
 import com.commerce.identityaccess.auth.repositories.RequestAuthorizedClientRepository;
+import com.commerce.identityaccess.customeraccount.exceptions.CustomerAccountBindingException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -45,6 +50,10 @@ public final class OidcBffAuthenticationSuccessHandler implements Authentication
             completeAuthentication(request, response, authentication);
         } catch (AuthenticationFailureException exception) {
             failureHandler.reject(response, exception);
+        } catch (CustomerAccountBindingException exception) {
+            failureHandler.reject(response, new AuthenticationFailureException("customer_account_binding_failed"));
+        } catch (DataAccessException exception) {
+            failureHandler.rejectDependencyUnavailable(response, exception);
         }
     }
 
@@ -60,16 +69,20 @@ public final class OidcBffAuthenticationSuccessHandler implements Authentication
             throw new AuthenticationFailureException("missing_callback_authorized_client");
         }
         ValidatedOidcPrincipal principal = principalValidator.validate(oidcUser, claimedNonce(request));
+        AuthFlowKind flowKind = claimedFlowKind(request);
+        if (flowKind == AuthFlowKind.CUSTOMER_REGISTRATION && principal.kind() != PrincipalKind.CUSTOMER) {
+            throw new AuthenticationFailureException("registration_actor_must_be_customer");
+        }
         String refreshToken = client.getRefreshToken() == null
                 ? null
                 : client.getRefreshToken().getTokenValue();
-        String rawSessionHandle = sessionService.create(
+        CreatedBffSession createdSession = sessionService.create(
                 principal,
                 new OidcTokenBundle(
                         oidcUser.getIdToken().getTokenValue(),
                         client.getAccessToken().getTokenValue(),
                         refreshToken));
-        cookieService.issue(response, rawSessionHandle);
+        cookieService.issue(response, createdSession.rawHandle());
         response.sendRedirect("/bff/csrf");
     }
 
@@ -79,5 +92,13 @@ public final class OidcBffAuthenticationSuccessHandler implements Authentication
             throw new AuthenticationFailureException("missing_callback_nonce");
         }
         return nonce;
+    }
+
+    private AuthFlowKind claimedFlowKind(HttpServletRequest request) {
+        Object flowKind = request.getAttribute(OidcAuthorizationRequestFactory.FLOW_KIND_ATTRIBUTE);
+        if (!(flowKind instanceof AuthFlowKind kind)) {
+            throw new AuthenticationFailureException("missing_callback_flow_kind");
+        }
+        return kind;
     }
 }

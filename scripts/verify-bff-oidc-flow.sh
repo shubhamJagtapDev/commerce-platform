@@ -110,6 +110,40 @@ start_login() {
   printf '%s' "$authorization_url"
 }
 
+verify_registration_entrypoint() {
+  local response_headers="$temporary_dir/registration-start.headers"
+  local authorization_url
+
+  verification_step="registration: start bounded hosted flow"
+  curl --fail --silent --show-error --max-time 5 \
+    --dump-header "$response_headers" \
+    --output /dev/null \
+    http://localhost:8080/bff/register
+  authorization_url="$(awk 'tolower($1) == "location:" { print $2 }' "$response_headers" | tr -d '\r')"
+  verification_step="registration: validate hosted create prompt"
+  [[ "$authorization_url" == http://localhost:8082/realms/commerce/protocol/openid-connect/auth\?* ]]
+  [[ "$authorization_url" == *"prompt=create"* ]]
+}
+
+verify_customer_account_binding() {
+  local binding_summary
+
+  verification_step="customer: verify durable principal-derived account binding"
+  binding_summary="$(docker compose --env-file .env -f deployment/local/compose.yaml exec -T postgres \
+    psql --username postgres --dbname identity_access --tuples-only --no-align \
+    --command "
+      select count(*) || ':' || count(distinct account_id)
+      from bff_session session
+      join customer_account account on account.account_id = session.account_id
+      where session.principal_kind = 'CUSTOMER'
+        and account.issuer = session.issuer
+        and account.subject = session.subject
+        and account.security_epoch = session.security_epoch
+        and account.status = 'ACTIVE';
+    ")"
+  [[ "$binding_summary" =~ ^[1-9][0-9]*:[1-9][0-9]*$ ]]
+}
+
 url_encode() {
   jq -rn --arg value "$1" '$value | @uri'
 }
@@ -430,7 +464,9 @@ verify_rejected_login() {
 
 verify_id_token_claim_contract customer synthetic-customer "$IDENTITY_FIXTURE_CUSTOMER_PASSWORD" CUSTOMER
 verify_id_token_claim_contract maintainer synthetic-maintainer "$IDENTITY_FIXTURE_MAINTAINER_PASSWORD" CATALOG_MAINTAINER
+verify_registration_entrypoint
 verify_accepted_login customer synthetic-customer "$IDENTITY_FIXTURE_CUSTOMER_PASSWORD"
+verify_customer_account_binding
 verify_accepted_login maintainer synthetic-maintainer "$IDENTITY_FIXTURE_MAINTAINER_PASSWORD"
 verify_rejected_login non-maintainer synthetic-non-maintainer "$IDENTITY_FIXTURE_NON_MAINTAINER_PASSWORD"
 assign_mixed_actor_roles

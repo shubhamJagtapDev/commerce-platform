@@ -3,7 +3,7 @@
   "enabled": true,
   "displayName": "Commerce Local Development",
   "sslRequired": "none",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "resetPasswordAllowed": false,
   "rememberMe": false,
   "bruteForceProtected": true,
@@ -23,6 +23,7 @@
       { "name": "CATALOG_MAINTAINER" }
     ]
   },
+  "defaultRoles": ["CUSTOMER"],
   "clients": [
     {
       "clientId": "identity-access-bff",

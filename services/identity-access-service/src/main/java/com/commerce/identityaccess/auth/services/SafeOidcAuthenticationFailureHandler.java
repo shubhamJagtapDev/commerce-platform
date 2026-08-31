@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -15,8 +16,10 @@ import org.springframework.stereotype.Component;
 @Component
 public final class SafeOidcAuthenticationFailureHandler implements AuthenticationFailureHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(SafeOidcAuthenticationFailureHandler.class);
-    private static final String PROBLEM_RESPONSE =
-            "{\"type\":\"urn:commerce:problem:authentication-failed\",\"title\":\"Authentication failed\",\"status\":401}";
+    private static final String AUTHENTICATION_PROBLEM =
+            "{\"type\":\"urn:commerce:problem:authentication-failed\",\"title\":\"Authentication failed\",\"status\":401,\"code\":\"AUTHENTICATION_FAILED\"}";
+    private static final String DEPENDENCY_PROBLEM =
+            "{\"type\":\"urn:commerce:problem:dependency-unavailable\",\"title\":\"Dependency unavailable\",\"status\":503,\"code\":\"DEPENDENCY_UNAVAILABLE\"}";
 
     @Override
     public void onAuthenticationFailure(
@@ -25,18 +28,36 @@ public final class SafeOidcAuthenticationFailureHandler implements Authenticatio
         String code = exception instanceof OAuth2AuthenticationException oauthFailure
                 ? oauthFailure.getError().getErrorCode()
                 : exception.getClass().getSimpleName();
-        reject(response, code);
+        if (exception instanceof AuthenticationServiceException
+                || "server_error".equals(code)
+                || "temporarily_unavailable".equals(code)) {
+            rejectDependencyUnavailable(response, code);
+            return;
+        }
+        rejectAuthentication(response, code);
     }
 
     public void reject(HttpServletResponse response, AuthenticationFailureException exception) throws IOException {
-        reject(response, exception.code());
+        rejectAuthentication(response, exception.code());
     }
 
-    private void reject(HttpServletResponse response, String code) throws IOException {
+    public void rejectDependencyUnavailable(HttpServletResponse response, Throwable failure) throws IOException {
+        rejectDependencyUnavailable(response, failure.getClass().getSimpleName());
+    }
+
+    private void rejectAuthentication(HttpServletResponse response, String code) throws IOException {
         LOGGER.info("OIDC callback authentication rejected with code={}", code);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/problem+json");
         response.setHeader("Cache-Control", "no-store");
-        response.getWriter().write(PROBLEM_RESPONSE);
+        response.getWriter().write(AUTHENTICATION_PROBLEM);
+    }
+
+    private void rejectDependencyUnavailable(HttpServletResponse response, String code) throws IOException {
+        LOGGER.warn("OIDC callback dependency unavailable with code={}", code);
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        response.setContentType("application/problem+json");
+        response.setHeader("Cache-Control", "no-store");
+        response.getWriter().write(DEPENDENCY_PROBLEM);
     }
 }

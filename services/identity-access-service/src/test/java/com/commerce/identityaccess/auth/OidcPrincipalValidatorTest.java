@@ -103,6 +103,7 @@ class OidcPrincipalValidatorTest {
                 Duration.ofMinutes(10),
                 Duration.ofMinutes(30),
                 Duration.ofHours(8),
+                new AuthProperties.Registration(true, 5, Duration.ofHours(1)),
                 new AuthProperties.Crypto("local-aes-2026-01", key, "local-hmac-2026-01", key));
     }
 }

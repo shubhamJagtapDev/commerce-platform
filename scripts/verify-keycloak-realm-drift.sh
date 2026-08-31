@@ -29,7 +29,8 @@ role_mappers="$(curl --fail --silent --show-error --max-time 3 \
   "http://localhost:8082/admin/realms/commerce/clients/$(jq -r '.id' <<<"$client")/protocol-mappers/models")"
 
 jq -e '
-  .registrationAllowed == false
+  .registrationAllowed == true
+  and (.defaultRoles | index("CUSTOMER") != null)
   and .rememberMe == false
   and .bruteForceProtected == true
   and .permanentLockout == false
@@ -39,6 +40,7 @@ jq -e '
   and .maxDeltaTimeSeconds == 43200
   and (.passwordPolicy | contains("hashAlgorithm(argon2)"))
   and (.passwordPolicy | contains("length(15)"))
+  and (.passwordPolicy | contains("maxLength(128)"))
   and (.passwordPolicy | contains("passwordBlacklist(10k-most-common.txt)"))
 ' <<<"$realm" >/dev/null
 
