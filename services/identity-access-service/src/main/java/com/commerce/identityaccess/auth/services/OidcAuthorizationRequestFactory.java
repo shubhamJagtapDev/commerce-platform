@@ -3,6 +3,7 @@ package com.commerce.identityaccess.auth.services;
 import com.commerce.identityaccess.auth.configs.AuthProperties;
 import com.commerce.identityaccess.auth.models.AuthFlowKind;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.core.endpoint.PkceParameterNames;
@@ -18,31 +19,37 @@ public final class OidcAuthorizationRequestFactory {
 
     private final AuthProperties properties;
     private final VersionedCryptoService cryptoService;
+    private final RegistrationIntentSigner registrationIntentSigner;
 
-    public OidcAuthorizationRequestFactory(AuthProperties properties, VersionedCryptoService cryptoService) {
+    public OidcAuthorizationRequestFactory(
+            AuthProperties properties,
+            VersionedCryptoService cryptoService,
+            RegistrationIntentSigner registrationIntentSigner) {
         this.properties = properties;
         this.cryptoService = cryptoService;
+        this.registrationIntentSigner = registrationIntentSigner;
     }
 
     public OAuth2AuthorizationRequest createLoginRequest() {
         String state = cryptoService.randomUrlValue();
         String nonce = cryptoService.randomUrlValue();
         String verifier = cryptoService.randomUrlValue();
-        return create(state, nonce, verifier, AuthFlowKind.LOGIN);
+        return create(state, nonce, verifier, AuthFlowKind.LOGIN, null);
     }
 
     public OAuth2AuthorizationRequest createRegistrationRequest() {
         String state = cryptoService.randomUrlValue();
         String nonce = cryptoService.randomUrlValue();
         String verifier = cryptoService.randomUrlValue();
-        return create(state, nonce, verifier, AuthFlowKind.CUSTOMER_REGISTRATION);
+        return create(state, nonce, verifier, AuthFlowKind.CUSTOMER_REGISTRATION, registrationIntentSigner.issue());
     }
 
     public OAuth2AuthorizationRequest restore(String state, String nonce, String verifier, AuthFlowKind flowKind) {
-        return create(state, nonce, verifier, flowKind);
+        return create(state, nonce, verifier, flowKind, null);
     }
 
-    private OAuth2AuthorizationRequest create(String state, String nonce, String verifier, AuthFlowKind flowKind) {
+    private OAuth2AuthorizationRequest create(
+            String state, String nonce, String verifier, AuthFlowKind flowKind, @Nullable String registrationIntent) {
         return OAuth2AuthorizationRequest.authorizationCode()
                 .authorizationUri(properties.publicIssuer() + "/protocol/openid-connect/auth")
                 .clientId(properties.clientId())
@@ -61,6 +68,9 @@ public final class OidcAuthorizationRequestFactory {
                     parameters.put(PkceParameterNames.CODE_CHALLENGE_METHOD, "S256");
                     if (flowKind == AuthFlowKind.CUSTOMER_REGISTRATION) {
                         parameters.put("prompt", "create");
+                        if (registrationIntent != null) {
+                            parameters.put("login_hint", registrationIntent);
+                        }
                     }
                 })
                 .build();

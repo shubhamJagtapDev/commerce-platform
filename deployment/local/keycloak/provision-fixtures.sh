@@ -6,6 +6,8 @@ SERVER=http://keycloak:8080
 
 "$KCADM" config credentials --server "$SERVER" --realm master --user "$KEYCLOAK_ADMIN_USER" --password "$KEYCLOAK_ADMIN_PASSWORD"
 
+/opt/keycloak/configuration/configure-registration-flow.sh
+
 ensure_user() {
     username="$1"
     password="$2"

@@ -50,5 +50,6 @@ tasks.named("check") {
     dependsOn("architectureCheck", "contractCheck", "secretCheck")
     dependsOn(
         ":services:catalog-service:check",
-        ":services:identity-access-service:check")
+        ":services:identity-access-service:check",
+        ":extensions:keycloak-registration-gate:check")
 }

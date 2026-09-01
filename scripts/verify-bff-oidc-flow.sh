@@ -10,6 +10,7 @@ verification_step="initializing"
 admin_token=""
 mixed_role_user_id=""
 mixed_roles_payload=""
+registration_user_ids=()
 
 cleanup() {
   if [[ -n "$admin_token" && -n "$mixed_role_user_id" && -n "$mixed_roles_payload" ]]; then
@@ -21,7 +22,29 @@ cleanup() {
       --output /dev/null \
       "http://localhost:8082/admin/realms/commerce/users/$mixed_role_user_id/role-mappings/realm" || true
   fi
+  if [[ -n "$admin_token" ]]; then
+    local registration_user_id
+    for registration_user_id in "${registration_user_ids[@]}"; do
+      curl --silent --show-error --max-time 5 \
+        --request DELETE \
+        --header "Authorization: Bearer $admin_token" \
+        --output /dev/null \
+        "http://localhost:8082/admin/realms/commerce/users/$registration_user_id" || true
+    done
+  fi
   rm -rf "$temporary_dir"
+}
+
+ensure_admin_token() {
+  if [[ -n "$admin_token" ]]; then
+    return
+  fi
+  admin_token="$(curl --fail --silent --show-error --max-time 5 \
+    --data-urlencode 'client_id=admin-cli' \
+    --data-urlencode 'grant_type=password' \
+    --data-urlencode "username=$KEYCLOAK_ADMIN_USER" \
+    --data-urlencode "password=$KEYCLOAK_ADMIN_PASSWORD" \
+    http://localhost:8082/realms/master/protocol/openid-connect/token | jq -er '.access_token')"
 }
 
 trap cleanup EXIT
@@ -32,12 +55,7 @@ assign_mixed_actor_roles() {
   local maintainer_role
 
   verification_step="mixed-role: obtain temporary Keycloak administration grant"
-  admin_token="$(curl --fail --silent --show-error --max-time 5 \
-    --data-urlencode 'client_id=admin-cli' \
-    --data-urlencode 'grant_type=password' \
-    --data-urlencode "username=$KEYCLOAK_ADMIN_USER" \
-    --data-urlencode "password=$KEYCLOAK_ADMIN_PASSWORD" \
-    http://localhost:8082/realms/master/protocol/openid-connect/token | jq -er '.access_token')"
+  ensure_admin_token
   verification_step="mixed-role: resolve isolated fixture and actor roles"
   mixed_role_user_id="$(curl --fail --silent --show-error --max-time 5 \
     --header "Authorization: Bearer $admin_token" \
@@ -59,6 +77,56 @@ assign_mixed_actor_roles() {
     --data "$mixed_roles_payload" \
     --output /dev/null \
     "http://localhost:8082/admin/realms/commerce/users/$mixed_role_user_id/role-mappings/realm"
+}
+
+registration_action_for() {
+  local registration_url="$1"
+  local cookie_jar="$2"
+  local registration_page="$3"
+
+  curl --fail --silent --show-error --max-time 5 \
+    --cookie "$cookie_jar" \
+    --cookie-jar "$cookie_jar" \
+    --output "$registration_page" \
+    "$registration_url"
+  perl -0777 -ne '
+    if (/<form\s+id="kc-register-form"[^>]*\saction="([^"]+)"/s) {
+      $action = $1;
+      $action =~ s/&amp;/&/g;
+      print $action;
+    }
+  ' "$registration_page"
+}
+
+submit_registration() {
+  local registration_action="$1"
+  local cookie_jar="$2"
+  local username="$3"
+  local response_headers="$4"
+  local response_body="$5"
+
+  curl --silent --show-error --max-time 5 \
+    --cookie "$cookie_jar" \
+    --cookie-jar "$cookie_jar" \
+    --dump-header "$response_headers" \
+    --output "$response_body" \
+    --data-urlencode "username=$username" \
+    --data-urlencode "email=$username@registration.test" \
+    --data-urlencode 'firstName=Synthetic' \
+    --data-urlencode 'lastName=Registration' \
+    --data-urlencode 'password=registration-test-password-2026' \
+    --data-urlencode 'password-confirm=registration-test-password-2026' \
+    "$registration_action"
+}
+
+keycloak_user_id() {
+  local username="$1"
+
+  ensure_admin_token
+  curl --fail --silent --show-error --max-time 5 \
+    --header "Authorization: Bearer $admin_token" \
+    "http://localhost:8082/admin/realms/commerce/users?username=$username&exact=true" \
+    | jq -r 'if length == 0 then "" elif length == 1 then .[0].id else error("registration user duplicated") end'
 }
 
 remove_mixed_actor_roles() {
@@ -113,6 +181,10 @@ start_login() {
 verify_registration_entrypoint() {
   local response_headers="$temporary_dir/registration-start.headers"
   local authorization_url
+  local registration_action
+  local cookie_jar="$temporary_dir/registration.cookies"
+  local username="registration-gate-$(openssl rand -hex 8)"
+  local user_id
 
   verification_step="registration: start bounded hosted flow"
   curl --fail --silent --show-error --max-time 5 \
@@ -123,6 +195,117 @@ verify_registration_entrypoint() {
   verification_step="registration: validate hosted create prompt"
   [[ "$authorization_url" == http://localhost:8082/realms/commerce/protocol/openid-connect/auth\?* ]]
   [[ "$authorization_url" == *"prompt=create"* ]]
+  [[ "$authorization_url" == *"login_hint=v1."* ]]
+  verification_step="registration: load admitted Keycloak form"
+  registration_action="$(registration_action_for \
+    "$authorization_url" \
+    "$cookie_jar" \
+    "$temporary_dir/registration.html")"
+  [[ "$registration_action" == http://localhost:8082/realms/commerce/login-actions/registration\?* ]]
+  verification_step="registration: submit one admitted registration"
+  submit_registration \
+    "$registration_action" \
+    "$cookie_jar" \
+    "$username" \
+    "$temporary_dir/registration-submit.headers" \
+    "$temporary_dir/registration-submit.html"
+  ensure_admin_token
+  user_id="$(keycloak_user_id "$username")"
+  [[ -n "$user_id" ]]
+  registration_user_ids+=("$user_id")
+  curl --fail --silent --show-error --max-time 5 \
+    --header "Authorization: Bearer $admin_token" \
+    "http://localhost:8082/admin/realms/commerce/users/$user_id/role-mappings/realm/composite" \
+    | jq -e 'any(.[]; .name == "CUSTOMER")' >/dev/null
+  verification_step="registration: reject replayed admission intent"
+  local replay_username="registration-replay-$(openssl rand -hex 8)"
+  local replay_cookie_jar="$temporary_dir/registration-replay.cookies"
+  local replay_action
+  replay_action="$(registration_action_for \
+    "$authorization_url" \
+    "$replay_cookie_jar" \
+    "$temporary_dir/registration-replay.html")"
+  submit_registration \
+    "$replay_action" \
+    "$replay_cookie_jar" \
+    "$replay_username" \
+    "$temporary_dir/registration-replay.headers" \
+    "$temporary_dir/registration-replay-response.html"
+  grep -Fq 'Registration is unavailable.' "$temporary_dir/registration-replay-response.html"
+  [[ -z "$(keycloak_user_id "$replay_username")" ]]
+}
+
+verify_registration_bypasses_are_rejected() {
+  local login_cookie_jar="$temporary_dir/registration-login-bypass.cookies"
+  local login_page="$temporary_dir/registration-login-bypass.html"
+  local login_url
+  local registration_link
+  local registration_action
+  local username="registration-login-bypass-$(openssl rand -hex 8)"
+
+  verification_step="registration bypass: load ordinary login"
+  login_url="$(start_login registration-login-bypass)"
+  login_action_for "$login_url" "$login_cookie_jar" "$login_page" >/dev/null
+  registration_link="$(perl -0777 -ne '
+    if (/<a\s+href="([^"]*login-actions\/registration[^"]*)"/s) {
+      $link = $1;
+      $link =~ s/&amp;/&/g;
+      print $link;
+    }
+  ' "$login_page")"
+  [[ -n "$registration_link" ]]
+  if [[ "$registration_link" == /* ]]; then
+    registration_link="http://localhost:8082$registration_link"
+  fi
+  registration_action="$(registration_action_for \
+    "$registration_link" \
+    "$login_cookie_jar" \
+    "$temporary_dir/registration-login-form.html")"
+  verification_step="registration bypass: reject login-derived registration"
+  submit_registration \
+    "$registration_action" \
+    "$login_cookie_jar" \
+    "$username" \
+    "$temporary_dir/registration-login-bypass.headers" \
+    "$temporary_dir/registration-login-bypass-response.html"
+  grep -Fq 'Registration is unavailable.' "$temporary_dir/registration-login-bypass-response.html"
+  [[ -z "$(keycloak_user_id "$username")" ]]
+
+  local direct_cookie_jar="$temporary_dir/registration-direct-bypass.cookies"
+  local direct_url="${login_url}&prompt=create"
+  local direct_action
+  local direct_username="registration-direct-bypass-$(openssl rand -hex 8)"
+  direct_action="$(registration_action_for \
+    "$direct_url" \
+    "$direct_cookie_jar" \
+    "$temporary_dir/registration-direct-form.html")"
+  verification_step="registration bypass: reject direct create prompt"
+  submit_registration \
+    "$direct_action" \
+    "$direct_cookie_jar" \
+    "$direct_username" \
+    "$temporary_dir/registration-direct-bypass.headers" \
+    "$temporary_dir/registration-direct-bypass-response.html"
+  grep -Fq 'Registration is unavailable.' "$temporary_dir/registration-direct-bypass-response.html"
+  [[ -z "$(keycloak_user_id "$direct_username")" ]]
+}
+
+verify_registration_start_limit() {
+  local attempt
+  local status=""
+
+  verification_step="registration: exhaust the bounded start allowance"
+  for attempt in {1..6}; do
+    status="$(curl --silent --show-error --max-time 5 \
+      --output "$temporary_dir/registration-limit-$attempt.response" \
+      --write-out '%{http_code}' \
+      http://localhost:8080/bff/register)"
+    if [[ "$status" == "429" ]]; then
+      break
+    fi
+    [[ "$status" == "302" ]]
+  done
+  [[ "$status" == "429" ]]
 }
 
 verify_customer_account_binding() {
@@ -132,7 +315,7 @@ verify_customer_account_binding() {
   binding_summary="$(docker compose --env-file .env -f deployment/local/compose.yaml exec -T postgres \
     psql --username postgres --dbname identity_access --tuples-only --no-align \
     --command "
-      select count(*) || ':' || count(distinct account_id)
+      select count(*) || ':' || count(distinct account.account_id)
       from bff_session session
       join customer_account account on account.account_id = session.account_id
       where session.principal_kind = 'CUSTOMER'
@@ -465,6 +648,7 @@ verify_rejected_login() {
 verify_id_token_claim_contract customer synthetic-customer "$IDENTITY_FIXTURE_CUSTOMER_PASSWORD" CUSTOMER
 verify_id_token_claim_contract maintainer synthetic-maintainer "$IDENTITY_FIXTURE_MAINTAINER_PASSWORD" CATALOG_MAINTAINER
 verify_registration_entrypoint
+verify_registration_bypasses_are_rejected
 verify_accepted_login customer synthetic-customer "$IDENTITY_FIXTURE_CUSTOMER_PASSWORD"
 verify_customer_account_binding
 verify_accepted_login maintainer synthetic-maintainer "$IDENTITY_FIXTURE_MAINTAINER_PASSWORD"
@@ -472,5 +656,6 @@ verify_rejected_login non-maintainer synthetic-non-maintainer "$IDENTITY_FIXTURE
 assign_mixed_actor_roles
 verify_rejected_login mixed-role synthetic-non-maintainer "$IDENTITY_FIXTURE_NON_MAINTAINER_PASSWORD"
 remove_mixed_actor_roles
+verify_registration_start_limit
 
 echo "BFF OIDC role-boundary flow: PASS"

@@ -202,7 +202,7 @@ Local development may use one physical PostgreSQL server but must create distinc
 
 **Implementation**
 
-- Enable bounded customer registration through Keycloak-hosted UI; no arbitrary public registration.
+- Enable bounded customer registration through Keycloak-hosted UI; require a short-lived, signed, single-use BFF intent at the Keycloak registration boundary so login links and direct authorization requests cannot bypass admission.
 - After a valid callback, classify actor and invoke `EstablishCustomerAccount` only for a customer—not a maintainer.
 - Create/load `customer_account` by exact `(issuer, subject)` and create one opaque session. Never join or transfer ownership by email.
 - Preserve a stable post-auth transition port for E3's mandatory guest-cart handoff without implementing Cart in COM-2.

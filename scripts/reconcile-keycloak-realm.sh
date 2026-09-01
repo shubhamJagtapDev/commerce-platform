@@ -20,7 +20,6 @@ curl --fail --silent --show-error --max-time 3 \
   -H 'Content-Type: application/json' \
   --data '{
     "registrationAllowed": true,
-    "defaultRoles": ["CUSTOMER"],
     "rememberMe": false,
     "bruteForceProtected": true,
     "permanentLockout": false,
@@ -96,5 +95,10 @@ reconcile_mapper() {
 reconcile_mapper "catalog-access-token-subject"
 reconcile_mapper "bff-id-token-realm-roles"
 reconcile_mapper "catalog-api-audience"
+
+docker compose --env-file .env -f deployment/local/compose.yaml exec -T \
+  -e KEYCLOAK_CONFIGURATION_SERVER=http://localhost:8080 \
+  keycloak \
+  /opt/keycloak/configuration/configure-registration-flow.sh
 
 echo "Keycloak realm reconciled. Re-run ./dev verify before using the local stack."

@@ -27,10 +27,17 @@ client="$(curl --fail --silent --show-error --max-time 3 \
 role_mappers="$(curl --fail --silent --show-error --max-time 3 \
   -H "Authorization: Bearer $admin_token" \
   "http://localhost:8082/admin/realms/commerce/clients/$(jq -r '.id' <<<"$client")/protocol-mappers/models")"
+registration_executions="$(curl --fail --silent --show-error --max-time 3 \
+  -H "Authorization: Bearer $admin_token" \
+  http://localhost:8082/admin/realms/commerce/authentication/flows/commerce-registration/executions)"
+server_info="$(curl --fail --silent --show-error --max-time 3 \
+  -H "Authorization: Bearer $admin_token" \
+  http://localhost:8082/admin/serverinfo)"
 
 jq -e '
   .registrationAllowed == true
-  and (.defaultRoles | index("CUSTOMER") != null)
+  and .registrationFlow == "commerce-registration"
+  and (.defaultRoles | index("CUSTOMER") == null)
   and .rememberMe == false
   and .bruteForceProtected == true
   and .permanentLockout == false
@@ -78,6 +85,18 @@ jq -e '
       "introspection.token.claim": "false"
     }
 ' <<<"$role_mappers" >/dev/null
+
+jq -e '
+  [ .[] | select(.providerId == "commerce-registration-intent") ] as $executions
+  | ($executions | length) == 1
+    and $executions[0].requirement == "REQUIRED"
+    and $executions[0].level == 1
+    and $executions[0].index == 1
+' <<<"$registration_executions" >/dev/null
+
+jq -e '
+  .providers["form-action"].providers["commerce-registration-intent"] != null
+' <<<"$server_info" >/dev/null
 
 jq -e '
   [ .[] | select(.name == "catalog-access-token-subject") ] as $mappers

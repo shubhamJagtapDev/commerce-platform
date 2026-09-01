@@ -23,7 +23,6 @@
       { "name": "CATALOG_MAINTAINER" }
     ]
   },
-  "defaultRoles": ["CUSTOMER"],
   "clients": [
     {
       "clientId": "identity-access-bff",

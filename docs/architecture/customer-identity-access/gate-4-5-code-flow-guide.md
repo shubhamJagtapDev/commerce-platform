@@ -28,6 +28,8 @@ flowchart LR
 | --- | --- |
 | Start login or bounded registration | `auth/controllers/BffAuthenticationController` |
 | Build fixed login/registration OIDC requests | `auth/services/OidcAuthorizationRequestFactory` |
+| Issue short-lived registration intents | `auth/services/RegistrationIntentSigner` |
+| Validate and consume registration admission | `extensions/keycloak-registration-gate` |
 | Persist and claim one-time flow kind, nonce, and PKCE material | `auth/repositories/AuthTransactionStore` |
 | Validate signed OIDC identity and exact actor role | `auth/services/OidcPrincipalValidator` |
 | Atomically bind account and create session | `auth/services/BffSessionService` |
@@ -48,7 +50,9 @@ sequenceDiagram
     actor Browser
     participant Controller as BffAuthenticationController
     participant Limiter as RegistrationRateLimiter
+    participant Signer as RegistrationIntentSigner
     participant Tx as auth_transaction
+    participant Gate as Keycloak registration gate
     participant Keycloak
     participant Success as OIDC success handler
     participant Accounts as CustomerAccountService
@@ -62,9 +66,16 @@ sequenceDiagram
     else sixth start in one hour
         Limiter-->>Browser: 429 + Retry-After
     else accepted
+        Controller->>Signer: issue 10-minute signed intent
         Controller->>Tx: store CUSTOMER_REGISTRATION + state/nonce/PKCE
-        Controller-->>Browser: 302 Keycloak prompt=create
+        Controller-->>Browser: 302 Keycloak prompt=create + intent
         Browser->>Keycloak: hosted registration and authentication
+        Keycloak->>Gate: validate client, prompt, expiry, and HMAC
+        Gate->>Gate: atomically consume intent JTI
+        alt missing, invalid, expired, or replayed intent
+            Gate-->>Browser: generic registration rejection
+        end
+        Gate->>Keycloak: grant CUSTOMER to the newly registered identity
         Keycloak-->>Success: authorization callback
         Success->>Tx: atomically claim transaction
         Success->>Success: validate token, nonce, issuer, audience, exact CUSTOMER role
@@ -150,6 +161,8 @@ flowchart TD
 
 - Registration is enabled only by the local `dev` profile and the local Keycloak realm; the base configuration remains disabled, so staging and production fail closed until explicitly enabled.
 - The registration limiter trusts only the servlet container's direct peer address and ignores caller-supplied forwarding headers.
+- Keycloak requires a valid single-use intent before user creation, so the ordinary login-page registration link and direct `prompt=create` requests cannot bypass BFF admission.
+- `CUSTOMER` is granted by the guarded registration action, not as a realm default; maintainer and non-maintainer fixtures therefore remain isolated actors.
 - Migration V003 deletes pre-Gate-4 customer sessions because they contain no account or security epoch. Users must authenticate again; maintainer sessions are unaffected.
 - The unique `(issuer, subject)` constraint is the concurrency authority. The repository's upsert makes callback replay idempotent without merging by email.
 - Session resolution checks the account on every customer request. Changing status or security epoch invalidates existing customer sessions immediately.
@@ -162,9 +175,10 @@ flowchart TD
 | --- | --- |
 | Hosted registration request is distinct from login | `OidcAuthorizationRequestFactoryTest` |
 | Registration start is bounded | `RegistrationRateLimiterTest` |
+| Intent expiry, tamper detection, and concurrent replay | `RegistrationIntentVerifierTest` |
 | Exact active account binding | `CustomerAccountServiceTest` |
 | Concurrent callbacks create one account | `CustomerAccountRepositoryTest` with PostgreSQL/Testcontainers |
 | Customer/maintainer and missing-account denial | `PrincipalAccessServiceTest` |
 | Controllers cannot bypass account services for repositories | `ArchitectureRulesTest` |
-| Local OIDC flow exposes `prompt=create` and persists a bound session | `scripts/verify-bff-oidc-flow.sh` |
+| Local OIDC flow admits one registration and rejects login, direct, and replay bypasses | `scripts/verify-bff-oidc-flow.sh` |
 | Realm registration/default-role/password policy does not drift | `scripts/verify-keycloak-realm-drift.sh` |

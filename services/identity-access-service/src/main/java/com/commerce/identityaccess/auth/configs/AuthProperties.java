@@ -1,6 +1,7 @@
 package com.commerce.identityaccess.auth.configs;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -27,7 +28,15 @@ public record AuthProperties(
     public record Registration(
             boolean enabled,
             @Positive int maxAttempts,
-            @NotNull Duration window) {}
+            @NotNull Duration window,
+            @NotNull Duration intentTtl,
+            @NotBlank String intentHmacKey) {
+
+        @AssertTrue(message = "intentTtl must be between one second and ten minutes")
+        public boolean isIntentTtlValid() {
+            return !intentTtl.isNegative() && !intentTtl.isZero() && intentTtl.compareTo(Duration.ofMinutes(10)) <= 0;
+        }
+    }
 
     public record Crypto(
             @NotBlank String encryptionKeyId,

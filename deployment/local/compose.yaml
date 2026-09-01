@@ -22,7 +22,9 @@ services:
       - backend
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.0
+    build:
+      context: ../..
+      dockerfile: deployment/local/keycloak/Dockerfile
     command: ["start-dev", "--import-realm"]
     environment:
       KC_DB: postgres
@@ -35,11 +37,13 @@ services:
       KC_HOSTNAME: http://localhost:8082
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       IDENTITY_OIDC_CLIENT_SECRET: ${IDENTITY_OIDC_CLIENT_SECRET}
+      IDENTITY_REGISTRATION_INTENT_HMAC_KEY: ${IDENTITY_REGISTRATION_INTENT_HMAC_KEY}
     ports:
       - "127.0.0.1:8082:8080"
     volumes:
       - ./keycloak/commerce-realm.json:/opt/keycloak/data/import/commerce-realm.json:ro
       - ./keycloak/password-blacklist/10k-most-common.txt:/opt/keycloak/data/password-blacklists/10k-most-common.txt:ro
+      - ./keycloak/configure-registration-flow.sh:/opt/keycloak/configuration/configure-registration-flow.sh:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,6 +68,7 @@ services:
       IDENTITY_FIXTURE_LOCKOUT_PASSWORD: ${IDENTITY_FIXTURE_LOCKOUT_PASSWORD}
     volumes:
       - ./keycloak/provision-fixtures.sh:/opt/keycloak/provision/provision-fixtures.sh:ro
+      - ./keycloak/configure-registration-flow.sh:/opt/keycloak/configuration/configure-registration-flow.sh:ro
       - catalog-fixtures:/opt/keycloak/fixture-output
     depends_on:
       keycloak:
@@ -86,6 +91,7 @@ services:
       IDENTITY_AUTH_ENCRYPTION_KEY: ${IDENTITY_AUTH_ENCRYPTION_KEY}
       IDENTITY_AUTH_HMAC_KEY_ID: ${IDENTITY_AUTH_HMAC_KEY_ID}
       IDENTITY_AUTH_HMAC_KEY: ${IDENTITY_AUTH_HMAC_KEY}
+      IDENTITY_REGISTRATION_INTENT_HMAC_KEY: ${IDENTITY_REGISTRATION_INTENT_HMAC_KEY}
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
