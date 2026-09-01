@@ -6,6 +6,8 @@ SERVER=http://keycloak:8080
 
 "$KCADM" config credentials --server "$SERVER" --realm master --user "$KEYCLOAK_ADMIN_USER" --password "$KEYCLOAK_ADMIN_PASSWORD"
 
+/opt/keycloak/configuration/configure-registration-flow.sh
+
 ensure_user() {
     username="$1"
     password="$2"
@@ -36,6 +38,9 @@ ensure_user() {
     "$KCADM" set-password -r commerce --username "$username" --new-password "$password"
     if [ -n "$role" ]; then
         "$KCADM" add-roles -r commerce --uusername "$username" --rolename "$role"
+    fi
+    if [ "$role" != "CUSTOMER" ]; then
+        "$KCADM" remove-roles -r commerce --uusername "$username" --rolename CUSTOMER || true
     fi
 }
 

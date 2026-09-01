@@ -7,6 +7,7 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.Repository;
 import org.springframework.web.bind.annotation.RestController;
 
 class ArchitectureRulesTest {
@@ -31,6 +32,27 @@ class ArchitectureRulesTest {
                 .should()
                 .dependOnClassesThat()
                 .areAssignableTo(JpaRepository.class)
+                .check(applicationClasses());
+    }
+
+    @Test
+    void controllersDoNotBypassCustomerAccountServices() {
+        noClasses()
+                .that()
+                .areAnnotatedWith(RestController.class)
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("..customeraccount.repositories..")
+                .check(applicationClasses());
+    }
+
+    @Test
+    void customerAccountRepositoriesUseSpringDataPersistence() {
+        com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes()
+                .that()
+                .resideInAPackage("..customeraccount.repositories..")
+                .should()
+                .beAssignableTo(Repository.class)
                 .check(applicationClasses());
     }
 

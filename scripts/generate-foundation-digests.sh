@@ -4,7 +4,7 @@ set -euo pipefail
 workspace_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$workspace_dir"
 
-find settings.gradle.kts build.gradle.kts gradle services contracts deployment/local \
+find settings.gradle.kts build.gradle.kts gradle services extensions contracts deployment/local \
   -type f \
   ! -path '*/build/*' \
   ! -path 'deployment/local/generated/*' \

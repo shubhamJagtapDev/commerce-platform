@@ -1,6 +1,9 @@
 .git
 .gradle
 **/build
+!extensions/keycloak-registration-gate/build
+!extensions/keycloak-registration-gate/build/libs
+!extensions/keycloak-registration-gate/build/libs/keycloak-registration-gate-0.1.0-SNAPSHOT.jar
 .env
 .idea
 docs/product/acceptance/evidence/generated

@@ -43,6 +43,14 @@ public class BffSessionEntity {
     @Getter
     private String subject;
 
+    @Column(name = "account_id")
+    @Getter
+    private @Nullable UUID accountId;
+
+    @Column(name = "security_epoch")
+    @Getter
+    private @Nullable Long securityEpoch;
+
     @Column(name = "oidc_session_id")
     private @Nullable String oidcSessionId;
 
@@ -76,6 +84,8 @@ public class BffSessionEntity {
             PrincipalKind principalKind,
             String issuer,
             String subject,
+            @Nullable UUID accountId,
+            @Nullable Long securityEpoch,
             @Nullable String oidcSessionId,
             Instant authenticatedAt,
             Instant idleExpiresAt,
@@ -88,6 +98,8 @@ public class BffSessionEntity {
         this.principalKind = principalKind.name();
         this.issuer = issuer;
         this.subject = subject;
+        this.accountId = accountId;
+        this.securityEpoch = securityEpoch;
         this.oidcSessionId = oidcSessionId;
         this.authenticatedAt = authenticatedAt;
         this.lastSeenAt = authenticatedAt;

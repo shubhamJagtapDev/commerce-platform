@@ -1,6 +1,7 @@
 package com.commerce.identityaccess.auth.repositories;
 
 import com.commerce.identityaccess.auth.exceptions.AuthenticationFailureException;
+import com.commerce.identityaccess.auth.models.AuthFlowKind;
 import com.commerce.identityaccess.auth.services.OidcAuthorizationRequestFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -43,10 +44,11 @@ public final class DatabaseAuthorizationRequestRepository
         String state = authorizationRequest.getState();
         String nonce = authorizationRequest.getAttribute(OidcParameterNames.NONCE);
         String verifier = authorizationRequest.getAttribute(PkceParameterNames.CODE_VERIFIER);
-        if (state == null || nonce == null || verifier == null) {
+        Object flowKind = authorizationRequest.getAttribute(OidcAuthorizationRequestFactory.FLOW_KIND_ATTRIBUTE);
+        if (state == null || nonce == null || verifier == null || !(flowKind instanceof AuthFlowKind kind)) {
             throw new AuthenticationFailureException();
         }
-        transactionStore.create(state, nonce, verifier);
+        transactionStore.create(state, nonce, verifier, kind);
     }
 
     @Override
@@ -58,10 +60,11 @@ public final class DatabaseAuthorizationRequestRepository
         }
         AuthTransactionStore.TransactionMaterial material = transactionStore.claim(state);
         request.setAttribute(NONCE_ATTRIBUTE, material.nonce());
+        request.setAttribute(OidcAuthorizationRequestFactory.FLOW_KIND_ATTRIBUTE, material.flowKind());
         return rebuild(state, material);
     }
 
     private OAuth2AuthorizationRequest rebuild(String state, AuthTransactionStore.TransactionMaterial material) {
-        return authorizationRequestFactory.restore(state, material.nonce(), material.verifier());
+        return authorizationRequestFactory.restore(state, material.nonce(), material.verifier(), material.flowKind());
     }
 }

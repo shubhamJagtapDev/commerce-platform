@@ -54,6 +54,7 @@ class BffSessionCookieServiceTest {
                 Duration.ofMinutes(10),
                 Duration.ofMinutes(30),
                 Duration.ofHours(8),
+                new AuthProperties.Registration(true, 5, Duration.ofHours(1), Duration.ofMinutes(10), key),
                 new AuthProperties.Crypto("local-aes-2026-01", key, "local-hmac-2026-01", key));
     }
 }

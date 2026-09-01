@@ -22,6 +22,7 @@ run_gradle() {
 case "${1:-help}" in
   start)
     scripts/init-local-env.sh
+    run_gradle :extensions:keycloak-registration-gate:jar
     "${compose[@]}" up --build -d
     ;;
   test)

@@ -60,6 +60,12 @@ commerce:
     transaction-ttl: PT10M
     session-idle-ttl: PT30M
     session-absolute-ttl: PT8H
+    registration:
+      enabled: false
+      max-attempts: 5
+      window: PT1H
+      intent-ttl: PT10M
+      intent-hmac-key: ${IDENTITY_REGISTRATION_INTENT_HMAC_KEY}
     crypto:
       encryption-key-id: ${IDENTITY_AUTH_ENCRYPTION_KEY_ID}
       encryption-key: ${IDENTITY_AUTH_ENCRYPTION_KEY}

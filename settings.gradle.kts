@@ -9,3 +9,4 @@ rootProject.name = "commerce-platform"
 
 include(":services:identity-access-service")
 include(":services:catalog-service")
+include(":extensions:keycloak-registration-gate")
