@@ -49,7 +49,13 @@ dependencies {
 }
 
 tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        if (name == "test") {
+            excludeTags("catalog-runtime-contract")
+        }
+    }
+    systemProperty("catalog.contract", rootProject.file("contracts/openapi/catalog-v1.yaml").absolutePath)
+    inputs.file(rootProject.file("contracts/openapi/catalog-v1.yaml"))
 }
 
 spotless {
@@ -75,4 +81,17 @@ tasks.named("check") {
 
 dependencyLocking {
     lockAllConfigurations()
+}
+
+// Explicit red baseline while Phase 1 controllers are implemented in later guides.
+// This task must pass before claiming runtime OpenAPI parity; ordinary check validates sources.
+tasks.register<Test>("runtimeContractTest") {
+    group = "verification"
+    description = "Compares generated Springdoc with the approved maintenance contract (initially red)."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("catalog-runtime-contract")
+    }
+    shouldRunAfter(tasks.test)
 }

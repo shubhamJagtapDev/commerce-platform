@@ -36,7 +36,8 @@ tasks.register<Exec>("architectureCheck") {
 
 tasks.register<Exec>("contractCheck") {
     group = "verification"
-    description = "Validates versioned HTTP and event contract sources."
+    description = "Validates versioned contract sources and Catalog OpenAPI invariants."
+    dependsOn(":services:catalog-service:test")
     commandLine("bash", "scripts/verify-contracts.sh")
 }
 

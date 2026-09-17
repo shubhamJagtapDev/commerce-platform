@@ -24,6 +24,22 @@ class ArchitectureRulesTest {
     }
 
     @Test
+    void productApplicationContractsRemainFrameworkNeutral() {
+        noClasses()
+                .that()
+                .resideInAPackage("..product.application..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(
+                        "org.springframework..",
+                        "jakarta.persistence..",
+                        "org.hibernate..",
+                        "com.fasterxml.jackson..",
+                        "tools.jackson..")
+                .check(applicationClasses());
+    }
+
+    @Test
     void controllersDoNotDependDirectlyOnJpaRepositories() {
         noClasses()
                 .that()
