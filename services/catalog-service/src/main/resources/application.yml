@@ -52,6 +52,18 @@ commerce:
     idempotency-hmac-key: ${CATALOG_IDEMPOTENCY_HMAC_KEY}
     idempotency-retention: PT24H
     idempotency-cleanup-interval: ${CATALOG_IDEMPOTENCY_CLEANUP_INTERVAL:PT1H}
+  catalog-lifecycle:
+    receipt-retention: PT24H
+    lifecycle-keys:
+      active:
+        id: ${CATALOG_LIFECYCLE_HMAC_KEY_ID}
+        material: ${CATALOG_LIFECYCLE_HMAC_KEY}
+      retained: [ ]
+    audit-keys:
+      active:
+        id: ${CATALOG_AUDIT_HMAC_KEY_ID}
+        material: ${CATALOG_AUDIT_HMAC_KEY}
+      retained: [ ]
 
 management:
   otlp:
