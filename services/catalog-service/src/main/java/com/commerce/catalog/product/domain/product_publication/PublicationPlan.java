@@ -1,7 +1,6 @@
 package com.commerce.catalog.product.domain.product_publication;
 
 import com.commerce.catalog.product.domain.InrMoney;
-
 import java.util.Objects;
 
 public record PublicationPlan(

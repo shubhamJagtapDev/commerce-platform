@@ -1,6 +1,11 @@
 package com.commerce.catalog.product.domain.policies;
 
 import com.commerce.catalog.product.domain.*;
+import com.commerce.catalog.product.domain.category.CategorySelection;
+import com.commerce.catalog.product.domain.category.CategoryTaxonomy;
+import com.commerce.catalog.product.domain.product_publication.*;
+import com.commerce.catalog.product.domain.product_variants.ConfiguredVariant;
+import com.commerce.catalog.product.domain.product_variants.VariantId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -8,12 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
-import com.commerce.catalog.product.domain.category.CategorySelection;
-import com.commerce.catalog.product.domain.category.CategoryTaxonomy;
-import com.commerce.catalog.product.domain.product_publication.*;
-import com.commerce.catalog.product.domain.product_variants.ConfiguredVariant;
-import com.commerce.catalog.product.domain.product_variants.VariantId;
 import org.jspecify.annotations.Nullable;
 
 public final class PublicationPolicy {
@@ -49,7 +48,7 @@ public final class PublicationPolicy {
     }
 
     private void validateCategory(
-        CategorySelection selection, CategoryTaxonomy taxonomy, List<PublicationViolation> violations) {
+            CategorySelection selection, CategoryTaxonomy taxonomy, List<PublicationViolation> violations) {
         if (!taxonomy.containsMain(selection.mainCategoryId())) {
             add(violations, "mainCategoryId", PublicationViolationCode.UNKNOWN_MAIN_CATEGORY);
             return;

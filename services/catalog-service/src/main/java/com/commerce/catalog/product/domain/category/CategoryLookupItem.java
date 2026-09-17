@@ -1,7 +1,6 @@
 package com.commerce.catalog.product.domain.category;
 
 import com.commerce.catalog.product.domain.TextFields;
-
 import java.util.Objects;
 
 public record CategoryLookupItem(CategoryId categoryId, String name, CategoryLevel level, CategoryId mainCategoryId) {

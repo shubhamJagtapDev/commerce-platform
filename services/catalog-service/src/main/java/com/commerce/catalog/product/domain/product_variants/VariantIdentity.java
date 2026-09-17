@@ -1,10 +1,9 @@
 package com.commerce.catalog.product.domain.product_variants;
 
+import com.commerce.catalog.product.domain.product_models.ProductId;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
-
-import com.commerce.catalog.product.domain.product_models.ProductId;
 import org.jspecify.annotations.Nullable;
 
 public record VariantIdentity(

@@ -8,17 +8,16 @@ import com.commerce.catalog.product.domain.category.CategorySelection;
 import com.commerce.catalog.product.domain.category.CategoryTaxonomy;
 import com.commerce.catalog.product.domain.policies.ProductLifecyclePolicy;
 import com.commerce.catalog.product.domain.policies.PublicationPolicy;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.IntStream;
-
 import com.commerce.catalog.product.domain.product_lifecycle.LifecycleViolationCode;
 import com.commerce.catalog.product.domain.product_models.*;
 import com.commerce.catalog.product.domain.product_publication.*;
 import com.commerce.catalog.product.domain.product_variants.ConfiguredVariant;
 import com.commerce.catalog.product.domain.product_variants.VariantId;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class ProductDomainPolicyTest {

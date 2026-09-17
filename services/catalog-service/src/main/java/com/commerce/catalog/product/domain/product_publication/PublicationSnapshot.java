@@ -2,7 +2,6 @@ package com.commerce.catalog.product.domain.product_publication;
 
 import com.commerce.catalog.product.domain.product_models.ProductId;
 import com.commerce.catalog.product.domain.product_variants.ConfiguredVariant;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;

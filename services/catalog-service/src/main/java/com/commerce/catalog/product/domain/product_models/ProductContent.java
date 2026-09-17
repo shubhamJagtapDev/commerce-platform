@@ -1,8 +1,7 @@
 package com.commerce.catalog.product.domain.product_models;
 
-import java.util.Objects;
-
 import com.commerce.catalog.product.domain.TextFields;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 public record ProductContent(

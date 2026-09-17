@@ -1,10 +1,9 @@
 package com.commerce.catalog.product.domain;
 
-import java.util.Objects;
-import java.util.UUID;
-
 import com.commerce.catalog.product.domain.product_models.ProductId;
 import com.commerce.catalog.product.domain.product_models.ProductState;
+import java.util.Objects;
+import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 public record MaintainerProductListItem(

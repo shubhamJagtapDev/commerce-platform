@@ -5,7 +5,6 @@ import com.commerce.catalog.product.domain.product_lifecycle.LifecycleViolationC
 import com.commerce.catalog.product.domain.product_models.ProductCommandResultState;
 import com.commerce.catalog.product.domain.product_models.ProductState;
 import com.commerce.catalog.product.domain.product_publication.PublicationCandidate;
-
 import java.util.Objects;
 
 public final class ProductLifecyclePolicy {

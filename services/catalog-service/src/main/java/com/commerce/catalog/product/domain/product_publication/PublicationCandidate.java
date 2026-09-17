@@ -5,7 +5,6 @@ import com.commerce.catalog.product.domain.category.CategorySelection;
 import com.commerce.catalog.product.domain.product_models.ProductContent;
 import com.commerce.catalog.product.domain.product_variants.ConfiguredVariant;
 import com.commerce.catalog.product.domain.product_variants.VariantId;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
