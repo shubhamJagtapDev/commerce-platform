@@ -14,9 +14,23 @@ spring:
       connection-timeout: 2000
       validation-timeout: 1000
   jpa:
+    # Don't keep Hibernate Session open for entire HTTP request
     open-in-view: false
+
     hibernate:
+      # Never automatically modify the database schema.
+      # Fail startup if entities don't match the schema.
       ddl-auto: validate
+
+    properties:
+      # Batch up to 50 compatible JDBC operations
+      hibernate.jdbc.batch_size: 50
+
+      # Group Inserts by entity type
+      hibernate.order_inserts: true
+
+      # Group Updates by entity type
+      hibernate.order_updates: true
   flyway:
     enabled: true
   mvc:

@@ -2,7 +2,11 @@ openapi: 3.1.0
 info:
   title: Commerce Catalog API
   version: 1.0.0
-  description: Catalog service contract including the COM-46 maintainer authorization probe.
+  description: >-
+    Approved Phase 1 maintainer contract (Gate 0, 2026-09-09), ahead of handler
+    implementation. Preserves the COM-46 probe including its 201/200 replay
+    convention. Lifecycle replay instead preserves original status/body/Location.
+    No public search/detail routes. Example category IDs are not fixture declarations.
 servers:
   - url: http://localhost:8081
 paths:
@@ -51,6 +55,672 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+  "/api/v1/catalog/maintenance/products":
+    post:
+      operationId: "createCatalogDraft"
+      summary: "Create a private product draft."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. UTF-8 application/json; maximum actual body 256 KiB and
+        headers 16 KiB. Unknown query parameters and duplicate scalar query values return 400.
+        Authorize against the current active Catalog grant before applying or replaying. Replays
+        within 24 hours preserve original status, body and Location and set Idempotency-
+        Replayed=true; original successes use false. Resolve replay before current product
+        existence/state/version checks, including after later withdrawal or draft discard. A receipt
+        is historical command data, never a reread of mutable current state. Rejected requests
+        create no successful receipt. For uncertain outcomes retry the same key/body within the
+        window; no automatic mutation retries. After expiry reconcile an uncertain create before
+        starting another command.
+      x-max-body-bytes: 262144
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/LifecycleIdempotencyKey"
+      responses:
+        "201":
+          description: "Committed result, including same-status replay."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+            Location:
+              $ref: "#/components/headers/ProductLocation"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CommandOutcome"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "409":
+          $ref: "#/components/responses/MaintenanceIdempotencyConflictOrVariantIdConflict"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "415":
+          $ref: "#/components/responses/MaintenanceUnsupportedMediaType"
+        "422":
+          $ref: "#/components/responses/MaintenanceCandidateInvalid"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/CreateDraftRequest"
+    get:
+      operationId: "listMaintainerProducts"
+      summary: "List private products by UUID keyset."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. Maximum headers 16 KiB; bodyless query. Unknown query
+        parameters and duplicate scalar query values return 400. No request body is accepted. GET
+        must not change product/version/replay expiry or commerce state. HEAD/OPTIONS must not
+        invoke mutation handlers.
+      x-max-body-bytes: 0
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/State"
+        - $ref: "#/components/parameters/After"
+        - $ref: "#/components/parameters/ProductLimit"
+      responses:
+        "200":
+          description: "Bounded private query result."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/ProductPage"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+  "/api/v1/catalog/maintenance/products/{productId}":
+    get:
+      operationId: "getMaintainerProduct"
+      summary: "Read current private product state."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. Maximum headers 16 KiB; bodyless query. Unknown query
+        parameters and duplicate scalar query values return 400. No request body is accepted. GET
+        must not change product/version/replay expiry or commerce state. HEAD/OPTIONS must not
+        invoke mutation handlers.
+      x-max-body-bytes: 0
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      responses:
+        "200":
+          description: "Bounded private query result."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/MaintainerProduct"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "404":
+          $ref: "#/components/responses/MaintenanceProductNotFound"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+  "/api/v1/catalog/maintenance/products/{productId}/candidate":
+    put:
+      operationId: "replaceCatalogCandidate"
+      summary: "Replace the complete private candidate."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. UTF-8 application/json; maximum actual body 256 KiB and
+        headers 16 KiB. Unknown query parameters and duplicate scalar query values return 400.
+        Authorize against the current active Catalog grant before applying or replaying. Replays
+        within 24 hours preserve original status, body and Location and set Idempotency-
+        Replayed=true; original successes use false. Resolve replay before current product
+        existence/state/version checks, including after later withdrawal or draft discard. A receipt
+        is historical command data, never a reread of mutable current state. Rejected requests
+        create no successful receipt. For uncertain outcomes retry the same key/body within the
+        window; no automatic mutation retries. After expiry reconcile an uncertain create before
+        starting another command.
+      x-max-body-bytes: 262144
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+        - $ref: "#/components/parameters/LifecycleIdempotencyKey"
+      responses:
+        "200":
+          description: "Committed result, including same-status replay."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CommandOutcome"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "404":
+          $ref: "#/components/responses/MaintenanceProductNotFound"
+        "409":
+          $ref: "#/components/responses/MaintenanceVersionConflictOrIdempotencyConflictOrVariantIdConflictOrVariantIdentityConflictOrLifecycleConflict"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "415":
+          $ref: "#/components/responses/MaintenanceUnsupportedMediaType"
+        "422":
+          $ref: "#/components/responses/MaintenanceCandidateInvalid"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/ReplaceCandidateRequest"
+  "/api/v1/catalog/maintenance/products/{productId}/publish":
+    post:
+      operationId: "publishCatalogProduct"
+      summary: "publish command."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. UTF-8 application/json; maximum actual body 256 KiB and
+        headers 16 KiB. Unknown query parameters and duplicate scalar query values return 400.
+        Authorize against the current active Catalog grant before applying or replaying. Replays
+        within 24 hours preserve original status, body and Location and set Idempotency-
+        Replayed=true; original successes use false. Resolve replay before current product
+        existence/state/version checks, including after later withdrawal or draft discard. A receipt
+        is historical command data, never a reread of mutable current state. Rejected requests
+        create no successful receipt. For uncertain outcomes retry the same key/body within the
+        window; no automatic mutation retries. After expiry reconcile an uncertain create before
+        starting another command.
+      x-max-body-bytes: 262144
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+        - $ref: "#/components/parameters/LifecycleIdempotencyKey"
+      responses:
+        "200":
+          description: "Committed result, including same-status replay."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CommandOutcome"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "404":
+          $ref: "#/components/responses/MaintenanceProductNotFound"
+        "409":
+          $ref: "#/components/responses/MaintenanceVersionConflictOrLifecycleConflictOrIdempotencyConflictOrVariantIdentityConflict"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "415":
+          $ref: "#/components/responses/MaintenanceUnsupportedMediaType"
+        "422":
+          $ref: "#/components/responses/MaintenanceCandidateInvalidOrPublicationIncomplete"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/LifecycleRequest"
+  "/api/v1/catalog/maintenance/products/{productId}/republish":
+    post:
+      operationId: "republishCatalogProduct"
+      summary: "republish command."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. UTF-8 application/json; maximum actual body 256 KiB and
+        headers 16 KiB. Unknown query parameters and duplicate scalar query values return 400.
+        Authorize against the current active Catalog grant before applying or replaying. Replays
+        within 24 hours preserve original status, body and Location and set Idempotency-
+        Replayed=true; original successes use false. Resolve replay before current product
+        existence/state/version checks, including after later withdrawal or draft discard. A receipt
+        is historical command data, never a reread of mutable current state. Rejected requests
+        create no successful receipt. For uncertain outcomes retry the same key/body within the
+        window; no automatic mutation retries. After expiry reconcile an uncertain create before
+        starting another command.
+      x-max-body-bytes: 262144
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+        - $ref: "#/components/parameters/LifecycleIdempotencyKey"
+      responses:
+        "200":
+          description: "Committed result, including same-status replay."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CommandOutcome"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "404":
+          $ref: "#/components/responses/MaintenanceProductNotFound"
+        "409":
+          $ref: "#/components/responses/MaintenanceVersionConflictOrLifecycleConflictOrIdempotencyConflictOrVariantIdentityConflict"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "415":
+          $ref: "#/components/responses/MaintenanceUnsupportedMediaType"
+        "422":
+          $ref: "#/components/responses/MaintenanceCandidateInvalidOrPublicationIncomplete"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/LifecycleRequest"
+  "/api/v1/catalog/maintenance/products/{productId}/withdraw":
+    post:
+      operationId: "withdrawCatalogProduct"
+      summary: "withdraw command."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. UTF-8 application/json; maximum actual body 256 KiB and
+        headers 16 KiB. Unknown query parameters and duplicate scalar query values return 400.
+        Authorize against the current active Catalog grant before applying or replaying. Replays
+        within 24 hours preserve original status, body and Location and set Idempotency-
+        Replayed=true; original successes use false. Resolve replay before current product
+        existence/state/version checks, including after later withdrawal or draft discard. A receipt
+        is historical command data, never a reread of mutable current state. Rejected requests
+        create no successful receipt. For uncertain outcomes retry the same key/body within the
+        window; no automatic mutation retries. After expiry reconcile an uncertain create before
+        starting another command.
+      x-max-body-bytes: 262144
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+        - $ref: "#/components/parameters/LifecycleIdempotencyKey"
+      responses:
+        "200":
+          description: "Committed result, including same-status replay."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CommandOutcome"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "404":
+          $ref: "#/components/responses/MaintenanceProductNotFound"
+        "409":
+          $ref: "#/components/responses/MaintenanceVersionConflictOrLifecycleConflictOrIdempotencyConflict"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "415":
+          $ref: "#/components/responses/MaintenanceUnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/LifecycleRequest"
+  "/api/v1/catalog/maintenance/products/{productId}/reactivate":
+    post:
+      operationId: "reactivateCatalogProduct"
+      summary: "reactivate command."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. UTF-8 application/json; maximum actual body 256 KiB and
+        headers 16 KiB. Unknown query parameters and duplicate scalar query values return 400.
+        Authorize against the current active Catalog grant before applying or replaying. Replays
+        within 24 hours preserve original status, body and Location and set Idempotency-
+        Replayed=true; original successes use false. Resolve replay before current product
+        existence/state/version checks, including after later withdrawal or draft discard. A receipt
+        is historical command data, never a reread of mutable current state. Rejected requests
+        create no successful receipt. For uncertain outcomes retry the same key/body within the
+        window; no automatic mutation retries. After expiry reconcile an uncertain create before
+        starting another command.
+      x-max-body-bytes: 262144
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+        - $ref: "#/components/parameters/LifecycleIdempotencyKey"
+      responses:
+        "200":
+          description: "Committed result, including same-status replay."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CommandOutcome"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "404":
+          $ref: "#/components/responses/MaintenanceProductNotFound"
+        "409":
+          $ref: "#/components/responses/MaintenanceVersionConflictOrLifecycleConflictOrIdempotencyConflictOrVariantIdentityConflict"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "415":
+          $ref: "#/components/responses/MaintenanceUnsupportedMediaType"
+        "422":
+          $ref: "#/components/responses/MaintenanceCandidateInvalidOrPublicationIncomplete"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/LifecycleRequest"
+  "/api/v1/catalog/maintenance/products/{productId}/variants/{variantId}/withdraw":
+    post:
+      operationId: "withdrawCatalogVariant"
+      summary: "variants {variantId} withdraw command."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. UTF-8 application/json; maximum actual body 256 KiB and
+        headers 16 KiB. Unknown query parameters and duplicate scalar query values return 400.
+        Authorize against the current active Catalog grant before applying or replaying. Replays
+        within 24 hours preserve original status, body and Location and set Idempotency-
+        Replayed=true; original successes use false. Resolve replay before current product
+        existence/state/version checks, including after later withdrawal or draft discard. A receipt
+        is historical command data, never a reread of mutable current state. Rejected requests
+        create no successful receipt. For uncertain outcomes retry the same key/body within the
+        window; no automatic mutation retries. After expiry reconcile an uncertain create before
+        starting another command.
+      x-max-body-bytes: 262144
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+        - $ref: "#/components/parameters/VariantId"
+        - $ref: "#/components/parameters/LifecycleIdempotencyKey"
+      responses:
+        "200":
+          description: "Committed result, including same-status replay."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CommandOutcome"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "404":
+          $ref: "#/components/responses/MaintenanceProductNotFoundOrVariantNotFound"
+        "409":
+          $ref: "#/components/responses/MaintenanceVersionConflictOrLifecycleConflictOrIdempotencyConflict"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "415":
+          $ref: "#/components/responses/MaintenanceUnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/LifecycleRequest"
+  "/api/v1/catalog/maintenance/products/{productId}/discard":
+    post:
+      operationId: "discardCatalogDraft"
+      summary: "discard command."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. UTF-8 application/json; maximum actual body 256 KiB and
+        headers 16 KiB. Unknown query parameters and duplicate scalar query values return 400.
+        Authorize against the current active Catalog grant before applying or replaying. Replays
+        within 24 hours preserve original status, body and Location and set Idempotency-
+        Replayed=true; original successes use false. Resolve replay before current product
+        existence/state/version checks, including after later withdrawal or draft discard. A receipt
+        is historical command data, never a reread of mutable current state. Rejected requests
+        create no successful receipt. For uncertain outcomes retry the same key/body within the
+        window; no automatic mutation retries. After expiry reconcile an uncertain create before
+        starting another command.
+      x-max-body-bytes: 262144
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+        - $ref: "#/components/parameters/LifecycleIdempotencyKey"
+      responses:
+        "200":
+          description: "Committed result, including same-status replay."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CommandOutcome"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "404":
+          $ref: "#/components/responses/MaintenanceProductNotFound"
+        "409":
+          $ref: "#/components/responses/MaintenanceVersionConflictOrLifecycleConflictOrIdempotencyConflict"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "415":
+          $ref: "#/components/responses/MaintenanceUnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/LifecycleRequest"
+  "/api/v1/catalog/maintenance/categories":
+    get:
+      operationId: "listMaintainerCategories"
+      summary: "List immutable two-level category fixtures."
+      tags:
+        - "Catalog maintenance"
+      security:
+        - catalogBearer: []
+      description: >-
+        Valid Catalog JWT and active local maintainer grant required. No caller-supplied
+        actor/owner/role/grant authority. Maximum headers 16 KiB; bodyless query. Unknown query
+        parameters and duplicate scalar query values return 400. No request body is accepted. GET
+        must not change product/version/replay expiry or commerce state. HEAD/OPTIONS must not
+        invoke mutation handlers.
+      x-max-body-bytes: 0
+      x-max-header-bytes: 16384
+      parameters:
+        - $ref: "#/components/parameters/After"
+        - $ref: "#/components/parameters/CategoryLimit"
+      responses:
+        "200":
+          description: "Bounded private query result."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/MaintainerCacheControl"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CategoryPage"
+        "400":
+          $ref: "#/components/responses/MaintenanceInvalidRequest"
+        "401":
+          $ref: "#/components/responses/MaintenanceAuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/MaintenanceForbidden"
+        "413":
+          $ref: "#/components/responses/MaintenanceRequestTooLarge"
+        "429":
+          $ref: "#/components/responses/MaintenanceRateLimited"
+        "500":
+          $ref: "#/components/responses/MaintenanceInternalError"
+        "503":
+          $ref: "#/components/responses/MaintenanceDependencyUnavailable"
+        "504":
+          $ref: "#/components/responses/MaintenanceGatewayTimeout"
   /actuator/health/liveness:
     get:
       operationId: catalogLiveness
@@ -109,6 +779,1392 @@ components:
           type: integer
         code:
           type: string
+    CatalogVersion:
+      type: "integer"
+      format: "int64"
+      minimum: 0
+    ProductState:
+      type: "string"
+      enum:
+        - "DRAFT"
+        - "PUBLISHED"
+        - "WITHDRAWN"
+    CommandOperation:
+      type: "string"
+      enum:
+        - "CREATE_DRAFT"
+        - "REPLACE_CANDIDATE"
+        - "PUBLISH"
+        - "REPUBLISH"
+        - "WITHDRAW_PRODUCT"
+        - "WITHDRAW_VARIANT"
+        - "REACTIVATE"
+        - "DISCARD"
+    Money:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "amount"
+        - "currency"
+      properties:
+        amount:
+          type: "string"
+          pattern: "^(0|[1-9][0-9]{0,8})(\\.[0-9]{1,2})?$"
+          not:
+            enum:
+              - "0"
+              - "0.0"
+              - "0.00"
+          examples:
+            - "0.01"
+            - "1299.00"
+            - "999999999.99"
+          description: >-
+            Exact decimal string in inclusive range 0.01–999999999.99. Reject whitespace, exponent
+            notation, leading zeros, JSON numbers and excess decimals including trailing zeros.
+            Never round or convert currency.
+        currency:
+          type: "string"
+          const: "INR"
+      examples:
+        - amount: "1299.00"
+          currency: "INR"
+    ImageUrl:
+      type: "string"
+      format: "uri"
+      maxLength: 2048
+      pattern: "^https://"
+      description: >-
+        Trim first. Absolute HTTPS URL with a host, no user-info or fragment. Preserve path/query
+        and array order; reject exact duplicates after trimming. Syntax validation only: never
+        fetch, resolve DNS, inspect media or log URLs.
+    LongDescription:
+      type:
+        - "object"
+        - "null"
+      additionalProperties: true
+      description: >-
+        Opaque JSON object; omitted/null clears the document on full replacement. Arbitrary nested
+        JSON values; no business schema. Root object depth 1, maximum depth 10, serialized UTF-8
+        content at most 32768 bytes; PostgreSQL jsonb::text must also fit 32768 bytes. Reject
+        duplicate keys, NUL, unpaired surrogates, numeric tokens over 128 characters and absolute
+        decimal exponent over 1000. Parse numbers exactly, never through double. Preserve JSON
+        values, not whitespace/key order; do not trim or normalize strings inside this document. Not
+        a search field.
+      x-max-serialized-utf8-bytes: 32768
+      x-max-json-depth: 10
+      x-max-number-token-characters: 128
+      x-max-absolute-decimal-exponent: 1000
+    CandidateVariant:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "variantId"
+        - "optionValues"
+        - "sellable"
+      properties:
+        variantId:
+          type: "string"
+          format: "uuid"
+          description: >-
+            Caller-generated UUID v4 for a new identity, or existing ID owned by this product.
+            Foreign/conflicting IDs return generic VARIANT_ID_CONFLICT. Once publicly sellable,
+            dimension/selection meaning cannot change under this ID.
+        optionValues:
+          type: "array"
+          minItems: 0
+          maxItems: 2
+          items:
+            type: "string"
+            minLength: 1
+            maxLength: 50
+            description: >-
+              Limits count Unicode code points after NFC normalization and trimming; supplied values
+              must be nonblank. Never truncate.
+        sellable:
+          type: "boolean"
+          description: "Explicit candidate offer intent, not inventory or public visibility."
+        price:
+          anyOf:
+            - $ref: "#/components/schemas/Money"
+            - type: "null"
+      description: >-
+        Null/omitted price is incomplete draft data. Any supplied price must be valid, even on a
+        non-sellable variant. Publication requires prices for every sellable variant.
+    Candidate:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "mainCategoryId"
+        - "imageUrls"
+        - "optionDimensions"
+        - "variants"
+      properties:
+        name:
+          anyOf:
+            - type: "string"
+              minLength: 1
+              maxLength: 200
+              description: >-
+                Limits count Unicode code points after NFC normalization and trimming; supplied
+                values must be nonblank. Never truncate.
+            - type: "null"
+        shortDescription:
+          anyOf:
+            - type: "string"
+              minLength: 1
+              maxLength: 2000
+              description: >-
+                Limits count Unicode code points after NFC normalization and trimming; supplied
+                values must be nonblank. Never truncate.
+            - type: "null"
+        mainCategoryId:
+          type: "string"
+          format: "uuid"
+          description: "Required existing main category."
+        subcategoryId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              description: "Must belong to mainCategoryId."
+            - type: "null"
+        imageUrls:
+          type: "array"
+          minItems: 0
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/ImageUrl"
+          uniqueItems: true
+        longDescription:
+          $ref: "#/components/schemas/LongDescription"
+        optionDimensions:
+          type: "array"
+          minItems: 0
+          maxItems: 2
+          items:
+            type: "string"
+            minLength: 1
+            maxLength: 50
+            description: >-
+              Limits count Unicode code points after NFC normalization and trimming; supplied values
+              must be nonblank. Never truncate.
+          uniqueItems: true
+        variants:
+          type: "array"
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CandidateVariant"
+      description: >-
+        Full private candidate replacement. Draft text/price may be incomplete; supplied data must
+        be valid. Distinct variant IDs and option selections; option values match dimension
+        positions and are case-sensitive. No dimensions requires exactly one explicit default
+        variant with empty optionValues. Publication requires name, shortDescription and at least
+        one sellable variant, with all sellable variants complete. Images and longDescription remain
+        optional content.
+    CreateDraftRequest:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "candidate"
+      properties:
+        candidate:
+          $ref: "#/components/schemas/Candidate"
+      examples:
+        - candidate:
+            mainCategoryId: "197f6853-810b-49a5-ad42-bd2379e7297e"
+            imageUrls: []
+            optionDimensions: []
+            variants:
+              - variantId: "d0087074-1f29-4ca4-ac87-3582d1770765"
+                optionValues: []
+                sellable: true
+                price: null
+    ReplaceCandidateRequest:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "expectedVersion"
+        - "candidate"
+      properties:
+        expectedVersion:
+          $ref: "#/components/schemas/CatalogVersion"
+        candidate:
+          $ref: "#/components/schemas/Candidate"
+    LifecycleRequest:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "expectedVersion"
+      properties:
+        expectedVersion:
+          $ref: "#/components/schemas/CatalogVersion"
+    CommandOutcome:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "commandId"
+        - "operation"
+        - "productId"
+        - "variantId"
+        - "resultVersion"
+        - "resultState"
+        - "publicationId"
+        - "appliedAt"
+      properties:
+        commandId:
+          type: "string"
+          format: "uuid"
+        operation:
+          $ref: "#/components/schemas/CommandOperation"
+        productId:
+          type: "string"
+          format: "uuid"
+        variantId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+            - type: "null"
+        resultVersion:
+          $ref: "#/components/schemas/CatalogVersion"
+        resultState:
+          type: "string"
+          enum:
+            - "DRAFT"
+            - "PUBLISHED"
+            - "WITHDRAWN"
+            - "DISCARDED"
+        publicationId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+            - type: "null"
+        appliedAt:
+          type: "string"
+          format: "date-time"
+      description: >-
+        Immutable committed command result, not current product state. Version 0 on create; prior
+        version +1 for every later success, including discard. DISCARDED exists only in receipts.
+        Last-variant withdrawal reports WITHDRAWN and retains the last publication ID. appliedAt is
+        the recorded application time within the committed transaction. No actor/grant/key/audit
+        content.
+      examples:
+        - commandId: "cba700dd-579c-493d-8914-1f940a3411e2"
+          operation: "PUBLISH"
+          productId: "b375f54a-4e57-4d78-91e8-70c4ad604477"
+          variantId: null
+          resultVersion: 1
+          resultState: "PUBLISHED"
+          publicationId: "e2e746a2-c732-43b7-b399-964e993211aa"
+          appliedAt: "2026-09-03T08:00:00Z"
+    ResponseMoney:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "amount"
+        - "currency"
+      properties:
+        amount:
+          type: "string"
+          pattern: "^(0|[1-9][0-9]{0,8})\\.[0-9]{2}$"
+          not:
+            enum:
+              - "0"
+              - "0.0"
+              - "0.00"
+          examples:
+            - "0.01"
+            - "1299.00"
+            - "999999999.99"
+          description: "Exact INR amount rendered with exactly two decimals; no rounding."
+        currency:
+          type: "string"
+          const: "INR"
+    ResponseCandidateVariant:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "variantId"
+        - "optionValues"
+        - "sellable"
+      properties:
+        variantId:
+          type: "string"
+          format: "uuid"
+          description: >-
+            Caller-generated UUID v4 for a new identity, or existing ID owned by this product.
+            Foreign/conflicting IDs return generic VARIANT_ID_CONFLICT. Once publicly sellable,
+            dimension/selection meaning cannot change under this ID.
+        optionValues:
+          type: "array"
+          minItems: 0
+          maxItems: 2
+          items:
+            type: "string"
+            minLength: 1
+            maxLength: 50
+            description: >-
+              Limits count Unicode code points after NFC normalization and trimming; supplied values
+              must be nonblank. Never truncate.
+        sellable:
+          type: "boolean"
+          description: "Explicit candidate offer intent, not inventory or public visibility."
+        price:
+          anyOf:
+            - $ref: "#/components/schemas/ResponseMoney"
+            - type: "null"
+      description: >-
+        Null/omitted price is incomplete draft data. Any supplied price must be valid, even on a
+        non-sellable variant. Publication requires prices for every sellable variant.
+    ResponseCandidate:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "mainCategoryId"
+        - "imageUrls"
+        - "optionDimensions"
+        - "variants"
+      properties:
+        name:
+          anyOf:
+            - type: "string"
+              minLength: 1
+              maxLength: 200
+              description: >-
+                Limits count Unicode code points after NFC normalization and trimming; supplied
+                values must be nonblank. Never truncate.
+            - type: "null"
+        shortDescription:
+          anyOf:
+            - type: "string"
+              minLength: 1
+              maxLength: 2000
+              description: >-
+                Limits count Unicode code points after NFC normalization and trimming; supplied
+                values must be nonblank. Never truncate.
+            - type: "null"
+        mainCategoryId:
+          type: "string"
+          format: "uuid"
+          description: "Required existing main category."
+        subcategoryId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              description: "Must belong to mainCategoryId."
+            - type: "null"
+        imageUrls:
+          type: "array"
+          minItems: 0
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/ImageUrl"
+          uniqueItems: true
+        longDescription:
+          $ref: "#/components/schemas/LongDescription"
+        optionDimensions:
+          type: "array"
+          minItems: 0
+          maxItems: 2
+          items:
+            type: "string"
+            minLength: 1
+            maxLength: 50
+            description: >-
+              Limits count Unicode code points after NFC normalization and trimming; supplied values
+              must be nonblank. Never truncate.
+          uniqueItems: true
+        variants:
+          type: "array"
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ResponseCandidateVariant"
+      description: >-
+        Full private candidate replacement. Draft text/price may be incomplete; supplied data must
+        be valid. Distinct variant IDs and option selections; option values match dimension
+        positions and are case-sensitive. No dimensions requires exactly one explicit default
+        variant with empty optionValues. Publication requires name, shortDescription and at least
+        one sellable variant, with all sellable variants complete. Images and longDescription remain
+        optional content.
+    MaintainerProduct:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "productId"
+        - "version"
+        - "state"
+        - "firstPublishedAt"
+        - "currentPublicationId"
+        - "candidate"
+      properties:
+        productId:
+          type: "string"
+          format: "uuid"
+        version:
+          $ref: "#/components/schemas/CatalogVersion"
+        state:
+          $ref: "#/components/schemas/ProductState"
+        firstPublishedAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+            - type: "null"
+        currentPublicationId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+            - type: "null"
+        candidate:
+          $ref: "#/components/schemas/ResponseCandidate"
+    ProductListItem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "productId"
+        - "version"
+        - "state"
+        - "name"
+        - "currentPublicationId"
+      properties:
+        productId:
+          type: "string"
+          format: "uuid"
+        version:
+          $ref: "#/components/schemas/CatalogVersion"
+        state:
+          $ref: "#/components/schemas/ProductState"
+        name:
+          anyOf:
+            - type: "string"
+              minLength: 1
+              maxLength: 200
+              description: >-
+                Limits count Unicode code points after NFC normalization and trimming; supplied
+                values must be nonblank. Never truncate.
+            - type: "null"
+        currentPublicationId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+            - type: "null"
+    Category:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "categoryId"
+        - "name"
+        - "level"
+        - "mainCategoryId"
+      properties:
+        categoryId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        level:
+          type: "string"
+          enum:
+            - "MAIN"
+            - "SUB"
+        mainCategoryId:
+          type: "string"
+          format: "uuid"
+          description: "Own categoryId for MAIN; parent ID for SUB. Fixture IDs are globally distinct across levels."
+    ProductPage:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "items"
+        - "hasMore"
+        - "nextAfter"
+      properties:
+        items:
+          type: "array"
+          minItems: 0
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/ProductListItem"
+        hasMore:
+          type: "boolean"
+        nextAfter:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+            - type: "null"
+      description: >-
+        UUID ascending keyset page, no total count or frozen cross-page snapshot. Fetch limit+1. If
+        an extra row exists, return limit items, hasMore=true, nextAfter=last returned ID; otherwise
+        hasMore=false and nextAfter=null. Unknown cursor IDs are valid seek positions; beyond end
+        returns an empty page.
+    CategoryPage:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "items"
+        - "hasMore"
+        - "nextAfter"
+      properties:
+        items:
+          type: "array"
+          minItems: 0
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/Category"
+        hasMore:
+          type: "boolean"
+        nextAfter:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+            - type: "null"
+      description: >-
+        UUID ascending keyset page, no total count or frozen cross-page snapshot. Fetch limit+1. If
+        an extra row exists, return limit items, hasMore=true, nextAfter=last returned ID; otherwise
+        hasMore=false and nextAfter=null. Unknown cursor IDs are valid seek positions; beyond end
+        returns an empty page.
+    InvalidRequestProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:invalid-request"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 400
+        code:
+          type: "string"
+          const: "INVALID_REQUEST"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Syntax, unknown/duplicate fields or query scalars, malformed/missing version/key/query. No
+        successful receipt. Never echo tokens, keys, rejected values, raw JSON/URLs or provider
+        internals.
+    AuthenticationRequiredProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:authentication-required"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 401
+        code:
+          type: "string"
+          const: "AUTHENTICATION_REQUIRED"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Missing or invalid Catalog identity; no domain effect. Never echo tokens, keys, rejected
+        values, raw JSON/URLs or provider internals.
+    ForbiddenProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:forbidden"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 403
+        code:
+          type: "string"
+          const: "FORBIDDEN"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        No active local grant, wrong coarse role or browser security failure. Never echo tokens,
+        keys, rejected values, raw JSON/URLs or provider internals.
+    ProductNotFoundProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:product-not-found"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 404
+        code:
+          type: "string"
+          const: "PRODUCT_NOT_FOUND"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Unknown product, including after discard. No foreign-resource disclosure. Never echo tokens,
+        keys, rejected values, raw JSON/URLs or provider internals.
+    VariantNotFoundProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:variant-not-found"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 404
+        code:
+          type: "string"
+          const: "VARIANT_NOT_FOUND"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Variant is not in the authorized target product. No foreign-resource disclosure. Never echo
+        tokens, keys, rejected values, raw JSON/URLs or provider internals.
+    VersionConflictProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:version-conflict"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 409
+        code:
+          type: "string"
+          const: "VERSION_CONFLICT"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+        currentVersion:
+          type: "integer"
+          format: "int64"
+          minimum: 0
+          description: "Only on an authorized version conflict."
+      description: >-
+        Stale expectedVersion. GET and consciously reconcile, then use a new key/version. No
+        overwrite, merge or automatic retry. Never echo tokens, keys, rejected values, raw JSON/URLs
+        or provider internals.
+    LifecycleConflictProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:lifecycle-conflict"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 409
+        code:
+          type: "string"
+          const: "LIFECYCLE_CONFLICT"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Command is invalid in the current lifecycle state; discard requires a never-published draft.
+        Never echo tokens, keys, rejected values, raw JSON/URLs or provider internals.
+    IdempotencyConflictProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:idempotency-conflict"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 409
+        code:
+          type: "string"
+          const: "IDEMPOTENCY_CONFLICT"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Live scoped key has a different fingerprint; original receipt and Catalog remain unchanged.
+        Never echo tokens, keys, rejected values, raw JSON/URLs or provider internals.
+    VariantIdConflictProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:variant-id-conflict"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 409
+        code:
+          type: "string"
+          const: "VARIANT_ID_CONFLICT"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        New identity conflicts or is foreign; no ownership disclosure. Never echo tokens, keys,
+        rejected values, raw JSON/URLs or provider internals.
+    VariantIdentityConflictProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:variant-identity-conflict"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 409
+        code:
+          type: "string"
+          const: "VARIANT_IDENTITY_CONFLICT"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        A previously publicly sellable ID cannot change option-dimension/selection meaning. Never
+        echo tokens, keys, rejected values, raw JSON/URLs or provider internals.
+    RequestTooLargeProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:request-too-large"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 413
+        code:
+          type: "string"
+          const: "REQUEST_TOO_LARGE"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Actual body or header bound exceeded; no truncation. Never echo tokens, keys, rejected
+        values, raw JSON/URLs or provider internals.
+    UnsupportedMediaTypeProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:unsupported-media-type"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 415
+        code:
+          type: "string"
+          const: "UNSUPPORTED_MEDIA_TYPE"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Body is not supported UTF-8 application/json. Never echo tokens, keys, rejected values, raw
+        JSON/URLs or provider internals.
+    CandidateInvalidProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:candidate-invalid"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 422
+        code:
+          type: "string"
+          const: "CANDIDATE_INVALID"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Well-formed candidate contains invalid values, field limits or relationships. Never echo
+        tokens, keys, rejected values, raw JSON/URLs or provider internals.
+    PublicationIncompleteProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:publication-incomplete"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 422
+        code:
+          type: "string"
+          const: "PUBLICATION_INCOMPLETE"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Candidate is not complete for publication. Never echo tokens, keys, rejected values, raw
+        JSON/URLs or provider internals.
+    RateLimitedProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:rate-limited"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 429
+        code:
+          type: "string"
+          const: "RATE_LIMITED"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Rejected before domain work, with Retry-After and no partial effect. Never echo tokens,
+        keys, rejected values, raw JSON/URLs or provider internals.
+    DependencyUnavailableProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:dependency-unavailable"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 503
+        code:
+          type: "string"
+          const: "DEPENDENCY_UNAVAILABLE"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+        outcome:
+          type: "string"
+          enum:
+            - "NOT_APPLIED"
+            - "UNKNOWN"
+      description: >-
+        Authority unavailable. NOT_APPLIED only with proof of no commit; otherwise UNKNOWN. Never
+        infer rollback from a connection failure. Never echo tokens, keys, rejected values, raw
+        JSON/URLs or provider internals.
+    GatewayTimeoutProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:gateway-timeout"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 504
+        code:
+          type: "string"
+          const: "GATEWAY_TIMEOUT"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+        outcome:
+          type: "string"
+          enum:
+            - "NOT_APPLIED"
+            - "UNKNOWN"
+      description: >-
+        BFF deadline exhausted. Once dispatched, outcome is UNKNOWN; same-key/body recovery within
+        the replay window. Never echo tokens, keys, rejected values, raw JSON/URLs or provider
+        internals.
+    InternalErrorProblem:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "type"
+        - "title"
+        - "status"
+        - "code"
+      properties:
+        type:
+          type: "string"
+          format: "uri"
+          const: "urn:commerce:problem:internal-error"
+        title:
+          type: "string"
+        status:
+          type: "integer"
+          const: 500
+        code:
+          type: "string"
+          const: "INTERNAL_ERROR"
+        correlationId:
+          type: "string"
+        violations:
+          type: "array"
+          minItems: 0
+          maxItems: 20
+          items:
+            type: "object"
+            additionalProperties: false
+            required:
+              - "field"
+              - "code"
+            properties:
+              field:
+                type: "string"
+              code:
+                type: "string"
+      description: >-
+        Unexpected integrity failure or defect. Generic safe response; log once with correlation,
+        never disclose SQL or rejected values. Never echo tokens, keys, rejected values, raw
+        JSON/URLs or provider internals.
+  parameters:
+    ProductId:
+      name: "productId"
+      in: "path"
+      required: true
+      schema:
+        type: "string"
+        format: "uuid"
+    VariantId:
+      name: "variantId"
+      in: "path"
+      required: true
+      schema:
+        type: "string"
+        format: "uuid"
+    LifecycleIdempotencyKey:
+      name: "Idempotency-Key"
+      in: "header"
+      required: true
+      description: >-
+        CSPRNG key with at least 128 bits of randomness; 16–128 allowed characters (UUID strings
+        fit). Scope: authenticated grant + operation. Target IDs, expectedVersion and normalized
+        full request are fingerprinted. Never put keys in URLs. 24 hours from successful appliedAt;
+        replay never extends expiry. Expired keys are new commands.
+      schema:
+        type: "string"
+        minLength: 16
+        maxLength: 128
+        pattern: "^[A-Za-z0-9_-]{16,128}$"
+    After:
+      name: "after"
+      in: "query"
+      required: false
+      schema:
+        type: "string"
+        format: "uuid"
+      description: >-
+        Strictly seek after this UUID in ascending PostgreSQL UUID order; unknown IDs are valid seek
+        positions.
+    ProductLimit:
+      name: "limit"
+      in: "query"
+      required: false
+      schema:
+        type: "integer"
+        minimum: 1
+        maximum: 50
+        default: 20
+    CategoryLimit:
+      name: "limit"
+      in: "query"
+      required: false
+      schema:
+        type: "integer"
+        minimum: 1
+        maximum: 50
+        default: 50
+    State:
+      name: "state"
+      in: "query"
+      required: false
+      schema:
+        $ref: "#/components/schemas/ProductState"
+  headers:
+    MaintainerCacheControl:
+      description: "Required on maintainer successes and errors."
+      schema:
+        type: "string"
+        const: "no-store"
+    IdempotencyReplayed:
+      description: >-
+        Required on command success: false for original application, true for replay. Replay
+        preserves original status/body/Location.
+      schema:
+        type: "boolean"
+    ProductLocation:
+      description: "Required on create, including replay: /api/v1/catalog/maintenance/products/{productId}."
+      schema:
+        type: "string"
+        format: "uri-reference"
+    RetryAfter:
+      description: "Required on 429; retry delay in seconds or HTTP date."
+      schema:
+        type: "string"
   responses:
     InvalidRequest:
       description: The request is malformed or violates the probe contract.
@@ -134,3 +2190,178 @@ components:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+    MaintenanceInvalidRequest:
+      description: "INVALID_REQUEST"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/InvalidRequestProblem"
+    MaintenanceAuthenticationRequired:
+      description: "AUTHENTICATION_REQUIRED"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/AuthenticationRequiredProblem"
+    MaintenanceForbidden:
+      description: "FORBIDDEN"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/ForbiddenProblem"
+    MaintenanceIdempotencyConflictOrVariantIdConflict:
+      description: "IDEMPOTENCY_CONFLICT / VARIANT_ID_CONFLICT"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/IdempotencyConflictProblem"
+              - $ref: "#/components/schemas/VariantIdConflictProblem"
+    MaintenanceRequestTooLarge:
+      description: "REQUEST_TOO_LARGE"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/RequestTooLargeProblem"
+    MaintenanceUnsupportedMediaType:
+      description: "UNSUPPORTED_MEDIA_TYPE"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/UnsupportedMediaTypeProblem"
+    MaintenanceCandidateInvalid:
+      description: "CANDIDATE_INVALID"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/CandidateInvalidProblem"
+    MaintenanceRateLimited:
+      description: "RATE_LIMITED"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+        Retry-After:
+          $ref: "#/components/headers/RetryAfter"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/RateLimitedProblem"
+    MaintenanceInternalError:
+      description: "INTERNAL_ERROR"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/InternalErrorProblem"
+    MaintenanceDependencyUnavailable:
+      description: "DEPENDENCY_UNAVAILABLE"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/DependencyUnavailableProblem"
+    MaintenanceGatewayTimeout:
+      description: "GATEWAY_TIMEOUT"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/GatewayTimeoutProblem"
+    MaintenanceProductNotFound:
+      description: "PRODUCT_NOT_FOUND"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            $ref: "#/components/schemas/ProductNotFoundProblem"
+    MaintenanceVersionConflictOrIdempotencyConflictOrVariantIdConflictOrVariantIdentityConflictOrLifecycleConflict:
+      description: >-
+        VERSION_CONFLICT / IDEMPOTENCY_CONFLICT / VARIANT_ID_CONFLICT / VARIANT_IDENTITY_CONFLICT /
+        LIFECYCLE_CONFLICT
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/VersionConflictProblem"
+              - $ref: "#/components/schemas/IdempotencyConflictProblem"
+              - $ref: "#/components/schemas/VariantIdConflictProblem"
+              - $ref: "#/components/schemas/VariantIdentityConflictProblem"
+              - $ref: "#/components/schemas/LifecycleConflictProblem"
+    MaintenanceVersionConflictOrLifecycleConflictOrIdempotencyConflictOrVariantIdentityConflict:
+      description: "VERSION_CONFLICT / LIFECYCLE_CONFLICT / IDEMPOTENCY_CONFLICT / VARIANT_IDENTITY_CONFLICT"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/VersionConflictProblem"
+              - $ref: "#/components/schemas/LifecycleConflictProblem"
+              - $ref: "#/components/schemas/IdempotencyConflictProblem"
+              - $ref: "#/components/schemas/VariantIdentityConflictProblem"
+    MaintenanceCandidateInvalidOrPublicationIncomplete:
+      description: "CANDIDATE_INVALID / PUBLICATION_INCOMPLETE"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/CandidateInvalidProblem"
+              - $ref: "#/components/schemas/PublicationIncompleteProblem"
+    MaintenanceVersionConflictOrLifecycleConflictOrIdempotencyConflict:
+      description: "VERSION_CONFLICT / LIFECYCLE_CONFLICT / IDEMPOTENCY_CONFLICT"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/VersionConflictProblem"
+              - $ref: "#/components/schemas/LifecycleConflictProblem"
+              - $ref: "#/components/schemas/IdempotencyConflictProblem"
+    MaintenanceProductNotFoundOrVariantNotFound:
+      description: "PRODUCT_NOT_FOUND / VARIANT_NOT_FOUND"
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/MaintainerCacheControl"
+      content:
+        "application/problem+json":
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/ProductNotFoundProblem"
+              - $ref: "#/components/schemas/VariantNotFoundProblem"
